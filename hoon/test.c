@@ -19,9 +19,17 @@ typedef struct {
     uint8_t len;      // 데이터 길이
 } CAN_Message;
 
+typedef struct __attribute__((packed)) {
+    uint8_t CompanyName[8]; // Assumed to be an ASCII string (not null-terminated)
+} BMS_Company_Info_t;
+
+BMS_Company_Info_t bms_company_info_t[MAX_STRUCT] = {
+    {00, 00, 00, 00, 00, 00, 00, 00}
+};
+
 
 CAN_Message can_msgs[MAX_STRUCTS] = {
-    {0x100, {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}, 8},
+    {0x100, {0}, 8},
     {0x200, {0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}, 8},
     {0x300, {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28}, 8},
     {0x400, {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38}, 8},
@@ -36,6 +44,7 @@ void *input_thread(void *arg) {
     
     while (1) {
         printf("수정할 구조체 인덱스 (0~%d)와 변경할 첫 번째 바이트 값 입력: ", MAX_STRUCTS - 1);
+        printf("\n press A to increase index0[0]: ");
         if (scanf("%d %x", &index, &value) == 2) {
             if (index >= 0 && index < MAX_STRUCTS) {
                 pthread_mutex_lock(&lock);
@@ -46,7 +55,11 @@ void *input_thread(void *arg) {
                 printf("잘못된 인덱스 입력\n");
             }
         } else {
-            printf("입력 오류\n");
+            if (index == "A") {
+                pthread_mutex_lock(&lock);
+                bms_company_info_t.Company
+            }
+            
             while (getchar() != '\n'); // 버퍼 클리어
         }
     }
@@ -86,6 +99,10 @@ void *can_sender_thread(void *arg) {
     while (1) {
         for (int i = 0; i < MAX_STRUCTS; i++) {
             pthread_mutex_lock(&lock);
+
+            // bms_company_info_t 데이터를 can_msgs[0].data에 복사
+            memcpy(can_msgs[0].data, bms_company_info_t[0].CompanyName, 8);
+
             frame.can_id = can_msgs[i].id;
             frame.can_dlc = can_msgs[i].len;
             memcpy(frame.data, can_msgs[i].data, frame.can_dlc);
