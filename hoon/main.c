@@ -18,12 +18,6 @@ Parameters:
 #define CARVIN "KMHEM44CPLU123456"
 #define BATTCYCLE 172
 
-//MACORS for color printing
-#define BLUE    "\033[34m"
-#define GREEN   "\033[32m"
-#define YELLOW  "\033[33m"
-#define RED     "\033[31m"
-#define RESET   "\033[0m" 
 
 void print_battery(float voltage, int temp) {
     int percentage = (int)(((voltage - BATTMIN) / (BATTMAX - BATTMIN)) * 100);

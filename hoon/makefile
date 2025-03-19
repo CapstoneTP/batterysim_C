@@ -12,7 +12,7 @@ SRCS = main.c
 OBJS = $(SRCS:.c=.o)
 $(info OBJS=$(OBJS))
 
-HEADERS = all_headers.h
+HEADERS = all_headers.h dbc.h
 
 .PHONY: all clean
 
