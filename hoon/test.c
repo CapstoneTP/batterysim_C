@@ -10,20 +10,32 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
-// 전역 구조체 배열 (CAN 데이터 저장)
+/*================================================================
+test.c
+test for making double threads and get simultaneous programming
+Press A to add value in index
+=================================================================*/
+
+
+//input_thread
 #define MAX_STRUCTS 5
+//CAN_sender_thread
+#define INTERFACENAME "vcan0"
+//print_screen_thread
+#define BAR_WIDTH 50  // 로딩 바의 전체 길이
+#define LOAD_TIME 100  // 로딩 단위 시간 (단위: ms)
 
 typedef struct {
     uint32_t id;      // CAN ID
-    uint8_t data[8];  // CAN 데이터
-    uint8_t len;      // 데이터 길이
+    uint8_t data[8];  // CAN data
+    uint8_t len;      // data length
 } CAN_Message;
 
 typedef struct __attribute__((packed)) {
-    uint8_t CompanyName[8]; // Assumed to be an ASCII string (not null-terminated)
+    uint8_t CompanyName[8];
 } BMS_Company_Info_t;
 
-BMS_Company_Info_t bms_company_info_t[MAX_STRUCT] = {
+BMS_Company_Info_t bms_company_info_t = {
     {00, 00, 00, 00, 00, 00, 00, 00}
 };
 
@@ -36,9 +48,9 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
     {0x500, {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48}, 8}
 };
 
-pthread_mutex_t lock; // 구조체 접근을 위한 뮤텍스
+pthread_mutex_t lock; // mutex to use structure-located-memory
 
-// 사용자 입력을 받아 CAN 데이터 수정하는 스레드
+// User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
     int index, value;
     
@@ -48,38 +60,38 @@ void *input_thread(void *arg) {
         if (scanf("%d %x", &index, &value) == 2) {
             if (index >= 0 && index < MAX_STRUCTS) {
                 pthread_mutex_lock(&lock);
-                can_msgs[index].data[0] = (uint8_t)value; // 첫 번째 바이트 값 변경
+                can_msgs[index].data[0] = (uint8_t)value;
                 pthread_mutex_unlock(&lock);
                 printf("구조체 %d 수정 완료: 첫 번째 바이트 -> 0x%02X\n", index, value);
             } else {
-                printf("잘못된 인덱스 입력\n");
+                if (index == 5) {
+                    pthread_mutex_lock(&lock);
+                    bms_company_info_t.CompanyName[0]++;
+                    pthread_mutex_unlock(&lock);
+                }
             }
         } else {
-            if (index == "A") {
-                pthread_mutex_lock(&lock);
-                bms_company_info_t.Company
-            }
-            
-            while (getchar() != '\n'); // 버퍼 클리어
+            printf("입력 오류");
+            while (getchar() != '\n'); // buffer clear
         }
     }
     return NULL;
 }
 
-// CAN 메시지를 전송하는 스레드
+// CAN tx thread
 void *can_sender_thread(void *arg) {
     int sock;
     struct sockaddr_can addr;
     struct ifreq ifr;
     struct can_frame frame;
     
-    // CAN 소켓 생성
+    // Generate CAN socket
     if ((sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
         perror("소켓 생성 실패");
         return NULL;
     }
 
-    strcpy(ifr.ifr_name, "vcan0");  // 가상 CAN 인터페이스 사용
+    strcpy(ifr.ifr_name, INTERFACENAME);
     if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
         perror("인터페이스 인덱스 가져오기 실패");
         close(sock);
@@ -95,13 +107,13 @@ void *can_sender_thread(void *arg) {
         return NULL;
     }
 
-    // CAN 패킷 전송 루프
+    // CAN packet tx loop
     while (1) {
         for (int i = 0; i < MAX_STRUCTS; i++) {
             pthread_mutex_lock(&lock);
 
-            // bms_company_info_t 데이터를 can_msgs[0].data에 복사
-            memcpy(can_msgs[0].data, bms_company_info_t[0].CompanyName, 8);
+            // Copy bms_company_info_t.CompnayName into can-msgs[0].data
+            memcpy(can_msgs[0].data, bms_company_info_t.CompanyName, 8);
 
             frame.can_id = can_msgs[i].id;
             frame.can_dlc = can_msgs[i].len;
@@ -111,7 +123,7 @@ void *can_sender_thread(void *arg) {
             if (write(sock, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
                 perror("CAN 패킷 전송 실패");
             }
-            usleep(500000); // 500ms 대기
+            usleep(500000); // 500ms
         }
     }
     
@@ -119,20 +131,50 @@ void *can_sender_thread(void *arg) {
     return NULL;
 }
 
+void *print_screen_thread(void *arg) {
+    int i;
+    
+    printf("Loading: [");  // 시작 텍스트
+    for (i = 0; i < BAR_WIDTH; i++) {
+        printf(" ");  // 초기 빈 공간
+    }
+    printf("] 0%%");  // 퍼센트 표시
+    fflush(stdout);  // 즉시 출력
+
+    for (i = 0; i <= BAR_WIDTH; i++) {
+        usleep(LOAD_TIME * 1000);  // 지연 (ms 단위 변환)
+
+        printf("\rLoading: [");  // 캐리지 리턴으로 줄 덮어쓰기
+        int j;
+        for (j = 0; j < i; j++) {
+            printf("=");  // 채워진 부분
+        }
+        for (; j < BAR_WIDTH; j++) {
+            printf(" ");  // 남은 빈 공간
+        }
+        printf("] %03d%%", (i * 100) / BAR_WIDTH);  // 진행률 표시
+        fflush(stdout);
+        if (i == BAR_WIDTH) i = 0;
+    }
+
+}
+
 int main() {
-    pthread_t tid1, tid2;
+    pthread_t tid1, tid2, tid3;
     
     pthread_mutex_init(&lock, NULL);
 
     
     
-    // 입력 및 CAN 송신 스레드 실행
+    // start InputThread && CANtxThread
     pthread_create(&tid1, NULL, input_thread, NULL);
     pthread_create(&tid2, NULL, can_sender_thread, NULL);
+    pthread_create(&tid3, NULL, print_screen_thread, NULL);
 
-    // 메인 스레드는 두 개의 스레드를 기다림
+    // Main Thread wait for both threads
     pthread_join(tid1, NULL);
     pthread_join(tid2, NULL);
+    pthread_join(tid3, NULL);
 
     pthread_mutex_destroy(&lock);
     

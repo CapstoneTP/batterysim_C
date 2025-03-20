@@ -25,8 +25,9 @@ int main() {
         for (; j < BAR_WIDTH; j++) {
             printf(" ");  // 남은 빈 공간
         }
-        printf("] %d%%", (i * 100) / BAR_WIDTH);  // 진행률 표시
+        printf("] %03d%%", (i * 100) / BAR_WIDTH);  // 진행률 표시
         fflush(stdout);
+        if (i == BAR_WIDTH) i = 0;
     }
 
     printf("\nDone!\n");
