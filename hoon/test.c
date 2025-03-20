@@ -9,6 +9,7 @@
 #include <linux/can/raw.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include "dbc.h"
 
 /*================================================================
 test.c
@@ -31,9 +32,9 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
-typedef struct __attribute__((packed)) {
-    uint8_t CompanyName[8];
-} BMS_Company_Info_t;
+// typedef struct __attribute__((packed)) {
+//     uint8_t CompanyName[8];
+// } BMS_Company_Info_t;
 
 BMS_Company_Info_t bms_company_info_t = {
     {00, 00, 00, 00, 00, 00, 00, 00}
@@ -50,6 +51,8 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
 
 pthread_mutex_t lock; // mutex to use structure-located-memory
 
+int ifinput = 0;
+
 // User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
     int index, value;
@@ -58,6 +61,9 @@ void *input_thread(void *arg) {
         printf("수정할 구조체 인덱스 (0~%d)와 변경할 첫 번째 바이트 값 입력: ", MAX_STRUCTS - 1);
         printf("\n press A to increase index0[0]: ");
         if (scanf("%d %x", &index, &value) == 2) {
+            pthread_mutex_lock(&lock);
+            ifinput = 1;
+            pthread_mutex_unlock(&lock);
             if (index >= 0 && index < MAX_STRUCTS) {
                 pthread_mutex_lock(&lock);
                 can_msgs[index].data[0] = (uint8_t)value;
@@ -143,7 +149,6 @@ void *print_screen_thread(void *arg) {
 
     for (i = 0; i <= BAR_WIDTH; i++) {
         usleep(LOAD_TIME * 1000);  // 지연 (ms 단위 변환)
-
         printf("\rLoading: [");  // 캐리지 리턴으로 줄 덮어쓰기
         int j;
         for (j = 0; j < i; j++) {
