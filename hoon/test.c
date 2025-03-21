@@ -8,10 +8,10 @@ Press A to add value in index
 
 
 //input_thread
-#define MAX_STRUCTS 5
+#define MAX_STRUCTS 9
 //CAN_sender_thread
 #define INTERFACENAME "vcan0"
-#define SLEEPTIME 500000  //500ms
+#define SLEEPTIME 100000  //500ms
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
@@ -27,13 +27,31 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
     {0x620, {0}, 8},        //bms_company_info
     {0x621, {0}, 8},        //vin_car_info
     {0x622, {0}, 6},        //bms_status
-    {0x623, {0}, 6},
-    {0x624, {0}, 6}
+    {0x623, {0}, 6},        //bms_battery_info
+    {0x624, {0}, 6},        //bms_charge_current_limits
+    {0x626, {0}, 6},        //bms_soc
+    {0x627, {0}, 6},        //bms_temperature
+    {0x628, {0}, 6},        //bms_resistance
+    {0x629, {0}, 8}         //bms_dc_charging
 };
 
 pthread_mutex_t lock; // mutex to use structure-located-memory
 
 int ifinput = 0;
+
+// User defiend function
+void refresh_CAN_container() {
+    // Copy bms_structure into can sender
+    memcpy(can_msgs[0].data, &bms_company_info, 8);
+    memcpy(can_msgs[1].data, &vin_car_info, 8);
+    memcpy(can_msgs[2].data, &bms_status, 6);
+    memcpy(can_msgs[3].data, &bms_battery_info, 6);
+    memcpy(can_msgs[4].data, &bms_charge_current_limits, 6);
+    memcpy(can_msgs[5].data, &bms_soc, 6);
+    memcpy(can_msgs[6].data, &bms_temperature, 6);
+    memcpy(can_msgs[7].data, &bms_resistance, 6);
+    memcpy(can_msgs[8].data, &bms_dc_charging, 8);
+}
 
 // User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
@@ -96,12 +114,7 @@ void *can_sender_thread(void *arg) {
     while (1) {
         for (int i = 0; i < MAX_STRUCTS; i++) {
             pthread_mutex_lock(&lock);
-
-            // Copy bms_company_info_t.CompnayName into can-msgs[0].data
-            memcpy(can_msgs[0].data, bms_company_info.CompanyName, 8);
-            memcpy(can_msgs[1].data, vin_car_info.Carname, 8);
-            memcpy(can_msgs[2].data, &bms_status, 6);
-
+            refresh_CAN_container();
             frame.can_id = can_msgs[i].id;
             frame.can_dlc = can_msgs[i].len;
             memcpy(frame.data, can_msgs[i].data, frame.can_dlc);
