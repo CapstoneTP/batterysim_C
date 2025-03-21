@@ -6,15 +6,19 @@ all_headers.h
 ==================================================================*/
 
 //standard headers
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <net/if.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 //MACORS for color printing
 #define BLUE    "\033[34m"

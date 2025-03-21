@@ -1,15 +1,4 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <sys/socket.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include "dbc.h"
+#include "all_headers.h"
 
 /*================================================================
 test.c
@@ -24,8 +13,8 @@ Press A to add value in index
 #define INTERFACENAME "vcan0"
 #define SLEEPTIME 500000  //500ms
 //print_screen_thread
-#define BAR_WIDTH 50        // 로딩 바의 전체 길이
-#define LOAD_TIME 100       // 로딩 단위 시간 (단위: ms)
+#define BAR_WIDTH 50        // MAX-length of loading bar
+#define LOAD_TIME 100       // load time (unit: ms)
 
 typedef struct {
     uint32_t id;      // CAN ID
@@ -33,17 +22,13 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
-BMS_Company_Info_t bms_company_info_t = {
-    {00, 00, 00, 00, 00, 00, 00, 00}
-};
-
 
 CAN_Message can_msgs[MAX_STRUCTS] = {
-    {0x100, {0}, 8},
-    {0x200, {0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}, 8},
-    {0x300, {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28}, 8},
-    {0x400, {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38}, 8},
-    {0x500, {0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48}, 8}
+    {0x620, {0}, 8},        //bms_company_info
+    {0x621, {0}, 8},        //vin_car_info
+    {0x622, {0}, 6},        //bms_status
+    {0x623, {0}, 6},
+    {0x624, {0}, 6}
 };
 
 pthread_mutex_t lock; // mutex to use structure-located-memory
@@ -58,9 +43,6 @@ void *input_thread(void *arg) {
         printf("수정할 구조체 인덱스 (0~%d)와 변경할 첫 번째 바이트 값 입력: ", MAX_STRUCTS - 1);
         printf("\n press A to increase index0[0]: ");
         if (scanf("%d %x", &index, &value) == 2) {
-            pthread_mutex_lock(&lock);
-            ifinput = 1;
-            pthread_mutex_unlock(&lock);
             if (index >= 0 && index < MAX_STRUCTS) {
                 pthread_mutex_lock(&lock);
                 can_msgs[index].data[0] = (uint8_t)value;
@@ -69,7 +51,7 @@ void *input_thread(void *arg) {
             } else {
                 if (index == 5) {
                     pthread_mutex_lock(&lock);
-                    bms_company_info_t.CompanyName[0]++;
+                    bms_company_info.CompanyName[0]++;
                     pthread_mutex_unlock(&lock);
                 }
             }
@@ -116,7 +98,9 @@ void *can_sender_thread(void *arg) {
             pthread_mutex_lock(&lock);
 
             // Copy bms_company_info_t.CompnayName into can-msgs[0].data
-            memcpy(can_msgs[0].data, bms_company_info_t.CompanyName, 8);
+            memcpy(can_msgs[0].data, bms_company_info.CompanyName, 8);
+            memcpy(can_msgs[1].data, vin_car_info.Carname, 8);
+            memcpy(can_msgs[2].data, &bms_status, 6);
 
             frame.can_id = can_msgs[i].id;
             frame.can_dlc = can_msgs[i].len;

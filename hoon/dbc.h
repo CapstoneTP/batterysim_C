@@ -16,6 +16,7 @@ typedef struct __attribute__((packed)) {
     uint8_t CompanyName[8]; // Assumed to be an ASCII string (not null-terminated)
 } BMS_Company_Info_t;
 
+
 // Structure for VIN_car_info (ID: 1569)
 // This message contains an 8-byte Carname field.
 typedef struct __attribute__((packed)) {
@@ -93,5 +94,36 @@ typedef struct __attribute__((packed)) {
     uint8_t  MaxDischargeCurrent;// 8 bits: Maximum Discharge Current (in A)
     uint16_t DCLinePower;        // 16 bits: DC Line Power (in W)
 } BMS_DC_Charging_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t batterytemp;
+    uint16_t batteryvoltage;
+    uint8_t batterycurrent;
+    uint8_t batterySOH;
+} Battery_C1;
+
+typedef struct __attribute__((packed)) {
+    uint8_t batterytemp;
+    uint16_t batteryvoltage;
+    uint8_t batterycurrent;
+    uint8_t batterySOH;
+} Battery_C2;
+
+
+/*================================================================
+extern declarations
+=================================================================*/
+extern BMS_Company_Info_t bms_company_info;
+extern VIN_car_info_t vin_car_info;
+extern BMS_Status_t bms_status;
+extern BMS_Battery_Info_t bms_battery_info;
+extern BMS_Charge_Current_Limits_t bms_charge_current_limits;
+extern BMS_SOC_t bms_soc;
+extern BMS_Temperature_t bms_temperature;
+extern BMS_Resistance_t bms_resistance;
+extern BMS_DC_Charging_t bms_dc_charging;
+extern Battery_C1 battery_C1;
+extern Battery_C2 battery_C2;
+
 
 #endif // DBC_H
