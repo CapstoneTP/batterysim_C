@@ -22,19 +22,16 @@ Press A to add value in index
 #define MAX_STRUCTS 5
 //CAN_sender_thread
 #define INTERFACENAME "vcan0"
+#define SLEEPTIME 500000  //500ms
 //print_screen_thread
-#define BAR_WIDTH 50  // 로딩 바의 전체 길이
-#define LOAD_TIME 100  // 로딩 단위 시간 (단위: ms)
+#define BAR_WIDTH 50        // 로딩 바의 전체 길이
+#define LOAD_TIME 100       // 로딩 단위 시간 (단위: ms)
 
 typedef struct {
     uint32_t id;      // CAN ID
     uint8_t data[8];  // CAN data
     uint8_t len;      // data length
 } CAN_Message;
-
-// typedef struct __attribute__((packed)) {
-//     uint8_t CompanyName[8];
-// } BMS_Company_Info_t;
 
 BMS_Company_Info_t bms_company_info_t = {
     {00, 00, 00, 00, 00, 00, 00, 00}
@@ -129,7 +126,7 @@ void *can_sender_thread(void *arg) {
             if (write(sock, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
                 perror("CAN 패킷 전송 실패");
             }
-            usleep(500000); // 500ms
+            usleep(SLEEPTIME);
         }
     }
     
