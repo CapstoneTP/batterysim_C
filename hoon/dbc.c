@@ -76,3 +76,8 @@ BMS_DC_Charging_t bms_dc_charging = {
     .MaxDischargeCurrent = 0x00,
     .DCLinePower = 0x0000
 };
+
+Battery_t battery [2] = {
+    {0x00, 0x0000, 0x00, 0x00},
+    {0x00, 0x0000, 0x00, 0x00}
+};
