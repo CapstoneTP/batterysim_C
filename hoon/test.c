@@ -15,12 +15,34 @@ Press A to add value in index
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
+//set cursor position
 
 typedef struct {
     uint32_t id;      // CAN ID
     uint8_t data[8];  // CAN data
     uint8_t len;      // data length
 } CAN_Message;
+
+int ifinput = 0;
+int modified_index = 0;
+int modified_value = 0;
+
+
+void print_battery_bar(int soc){
+    int bar_length = (soc * BAR_WIDTH) / 100;
+    int i;
+    printf("Battery: [");
+    for (i = 0; i < bar_length; i++) {
+        printf("=");
+    }
+    for (; i < BAR_WIDTH; i++) {
+        printf(" ");
+    }
+    printf("] %d%%", soc);
+    fflush(stdout);
+
+
+
 
 
 CAN_Message can_msgs[MAX_STRUCTS] = {
@@ -36,8 +58,6 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
 };
 
 pthread_mutex_t lock; // mutex to use structure-located-memory
-
-int ifinput = 0;
 
 // User defiend function
 void refresh_CAN_container() {
@@ -58,18 +78,19 @@ void *input_thread(void *arg) {
     int index, value;
     
     while (1) {
-        printf("수정할 구조체 인덱스 (0~%d)와 변경할 첫 번째 바이트 값 입력: ", MAX_STRUCTS - 1);
-        printf("\n press A to increase index0[0]: ");
         if (scanf("%d %x", &index, &value) == 2) {
             if (index >= 0 && index < MAX_STRUCTS) {
                 pthread_mutex_lock(&lock);
+                modified_index = index;
+                modified_value = value;
                 can_msgs[index].data[0] = (uint8_t)value;
+                ifinput = 1;
                 pthread_mutex_unlock(&lock);
-                printf("구조체 %d 수정 완료: 첫 번째 바이트 -> 0x%02X\n", index, value);
             } else {
                 if (index == 5) {
                     pthread_mutex_lock(&lock);
                     bms_company_info.CompanyName[0]++;
+                    ifinput = 1;
                     pthread_mutex_unlock(&lock);
                 }
             }
@@ -130,35 +151,12 @@ void *can_sender_thread(void *arg) {
     close(sock);
     return NULL;
 }
-
 void *print_screen_thread(void *arg) {
-    int i;
-    
-    printf("Loading: [");  // 시작 텍스트
-    for (i = 0; i < BAR_WIDTH; i++) {
-        printf(" ");  // 초기 빈 공간
-    }
-    printf("] 0%%");  // 퍼센트 표시
-    fflush(stdout);  // 즉시 출력
-
-    for (i = 0; i <= BAR_WIDTH; i++) {
-        usleep(LOAD_TIME * 1000);  // 지연 (ms 단위 변환)
-        printf("\rLoading: [");  // 캐리지 리턴으로 줄 덮어쓰기
-        int j;
-        for (j = 0; j < i; j++) {
-            printf("=");  // 채워진 부분
-        }
-        for (; j < BAR_WIDTH; j++) {
-            printf(" ");  // 남은 빈 공간
-        }
-        printf("] %03d%%", (i * 100) / BAR_WIDTH);  // 진행률 표시
-        fflush(stdout);
-        if (i == BAR_WIDTH) i = 0;
-    }
 
 }
 
 int main() {
+    printf(CLEAR_SCREEN);              //clear whole screen
     pthread_t tid1, tid2, tid3;
     
     pthread_mutex_init(&lock, NULL);
@@ -177,5 +175,5 @@ int main() {
 
     pthread_mutex_destroy(&lock);
     
-    return 0;
+
 }

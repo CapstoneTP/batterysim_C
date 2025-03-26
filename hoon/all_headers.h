@@ -27,6 +27,10 @@ all_headers.h
 #define RED     "\033[31m"
 #define RESET   "\033[0m"
 
+//MACORS for setting cursor position
+#define SET_CURSOR_UL "\x1b[H"
+#define CLEAR_SCREEN "\x1b[2J"
+
 //userdefined headers
 #include "dbc.h"
 

@@ -43,7 +43,7 @@ BMS_Charge_Current_Limits_t bms_charge_current_limits = {
 
 // Reset (ID: 1574, 0x626)
 BMS_SOC_t bms_soc = {
-    .SOC = 0x7F,
+    .SOC = 0x64,
     .DOD = 0x0000,
     .Capacity = 0x0000,
     .SOH = 0x7F
