@@ -6,6 +6,13 @@ test for making double threads and get simultaneous programming
 Press A to add value in index
 =================================================================*/
 
+/*================================================================
+ToDoLiSt
+- [ ] have to printf(CURSOR_SHOW); before terminate program
+    - [ ] try 'int running = 1;
+    - [ ] try sighandler
+=================================================================*/
+
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -23,6 +30,7 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
+int running = 1;    // <<- try
 int ifinput = 0;
 int modified_index = 0;
 int modified_value = 0;
@@ -44,6 +52,10 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_temp(){
     
+}
+
+void print_exit() {
+    printf("exit BMS_SIM\n");
 }
 
 void print_logo() {
@@ -207,6 +219,7 @@ void *print_screen_thread(void *arg) {
 
 int main() {
     printf(CLEAR_SCREEN);              //clear whole screen
+    atexit(exit_message());
     pthread_t tid1, tid2, tid3;
     
     pthread_mutex_init(&lock, NULL);
@@ -220,8 +233,7 @@ int main() {
     pthread_join(tid1, NULL);
     pthread_join(tid2, NULL);
     pthread_join(tid3, NULL);
-    
+
     pthread_mutex_destroy(&lock);
-    
 
 }

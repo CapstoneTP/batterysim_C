@@ -225,9 +225,6 @@ int main() {
     pthread_join(tid2, NULL);
     pthread_join(tid3, NULL);
     
-    printf("exiting BMS_SIM\n");
-    printf(CURSOR_SHOW);
     pthread_mutex_destroy(&lock);
-    
 
 }
