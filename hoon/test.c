@@ -11,6 +11,7 @@ ToDoLiSt
 - [ ] have to printf(CURSOR_SHOW); before terminate program
     - [ ] try 'int running = 1;
     - [ ] try sighandler
+    - [ ] try atexit
 =================================================================*/
 
 
@@ -52,10 +53,6 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_temp(){
     
-}
-
-void print_exit() {
-    printf("exit BMS_SIM\n");
 }
 
 void print_logo() {
@@ -219,7 +216,6 @@ void *print_screen_thread(void *arg) {
 
 int main() {
     printf(CLEAR_SCREEN);              //clear whole screen
-    atexit(exit_message());
     pthread_t tid1, tid2, tid3;
     
     pthread_mutex_init(&lock, NULL);
