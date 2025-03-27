@@ -60,7 +60,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝     \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝ ver0.1\n"
         "                           \n";
 
     printf("%s", logo);
@@ -86,7 +86,7 @@ pthread_mutex_t lock; // mutex to use structure-located-memory
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
-    // pthread_mutex_lock(&lock);                           <- occur error if lock mutex. but why?? ??
+    // pthread_mutex_lock(&lock);                           //<- occur error if lock mutex. but why?? ??
     memcpy(can_msgs[0].data, &bms_company_info, 8);
     memcpy(can_msgs[1].data, &vin_car_info, 8);
     memcpy(can_msgs[2].data, &bms_status, 6);
