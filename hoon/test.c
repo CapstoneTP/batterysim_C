@@ -86,7 +86,7 @@ pthread_mutex_t lock; // mutex to use structure-located-memory
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
-    // pthread_mutex_lock(&lock);                           //<- occur error if lock mutex. but why?? ??
+    // mutex already locked before calling refresh_CAN_container
     memcpy(can_msgs[0].data, &bms_company_info, 8);
     memcpy(can_msgs[1].data, &vin_car_info, 8);
     memcpy(can_msgs[2].data, &bms_status, 6);
@@ -96,7 +96,6 @@ void refresh_CAN_container() {
     memcpy(can_msgs[6].data, &bms_temperature, 6);
     memcpy(can_msgs[7].data, &bms_resistance, 6);
     memcpy(can_msgs[8].data, &bms_dc_charging, 8);
-    // pthread_mutex_unlock(&lock);
 }
 
 // User input thread    ||fix CAN data belongs to user input
