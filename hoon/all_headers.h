@@ -28,8 +28,12 @@ all_headers.h
 #define RESET   "\033[0m"
 
 //MACORS for setting cursor position
+#define CLEAR_SCREEN "\x1b[1J"
+#define CURSOR_HIDE "\x1b[?25l"
+#define CURSOR_SHOW "\x1b[?25h"
 #define SET_CURSOR_UL "\x1b[H"
-#define CLEAR_SCREEN "\x1b[2J"
+#define CURSOR_UP "\x1b[1A]"
+#define START_SCREEN printf(CURSOR_HIDE, CLEAR_SCREEN, SET_CURSOR_UL);
 
 //userdefined headers
 #include "dbc.h"

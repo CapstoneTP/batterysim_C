@@ -46,6 +46,26 @@ void print_temp(){
     
 }
 
+void print_logo() {
+    const char *logo =
+        "██████╗ ███╗   ███╗███████╗\n"
+        "██╔══██╗████╗ ████║██╔════╝\n"
+        "██████╔╝██╔████╔██║███████╗\n"
+        "██╔══██╗██║╚██╔╝██║╚════██║\n"
+        "██████╔╝██║ ╚═╝ ██║███████║\n"
+        "╚═════╝ ╚═╝     ╚═╝╚══════╝\n"
+        "                           \n"
+        "███████╗██╗███╗   ███╗     \n"
+        "██╔════╝██║████╗ ████║     \n"
+        "███████╗██║██╔████╔██║     \n"
+        "╚════██║██║██║╚██╔╝██║     \n"
+        "███████║██║██║ ╚═╝ ██║     \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝     \n"
+        "                           \n";
+
+    printf("%s", logo);
+}
+
 
 
 
@@ -95,7 +115,10 @@ void *input_thread(void *arg) {
             } else {
                 if (index == 10) {
                     pthread_mutex_lock(&lock);
+                    modified_index = index;
+                    modified_value = value;
                     bms_soc.SOC = value;
+                    ifinput = 1;
                     pthread_mutex_unlock(&lock);
                 }
             }
@@ -158,6 +181,9 @@ void *can_sender_thread(void *arg) {
 }
 void *print_screen_thread(void *arg) {
     printf(CLEAR_SCREEN);
+    printf(CURSOR_HIDE);
+    printf(SET_CURSOR_UL);
+    print_logo();
     while(1) {
         pthread_mutex_lock(&lock);
         int local_ifinput = ifinput;
@@ -167,7 +193,8 @@ void *print_screen_thread(void *arg) {
         ifinput = 0;
         pthread_mutex_unlock(&lock);
         if (1 == local_ifinput) {
-            printf("%d번쨰 인덱스 수정됨 >> 값 0x%02x\n", local_modified_index, local_modified_value);
+            printf(CURSOR_UP);
+            printf("\r%d번쨰 인덱스 수정됨 >> 값 0x%02x                                            \n", local_modified_index, local_modified_value);
             local_ifinput = 0;
             fflush(stdout);
         }
