@@ -18,7 +18,7 @@ typedef struct __attribute__((packed)) {
 
 
 // Structure for VIN_car_info (ID: 1569, 0x621)
-// This message contains an 8-byte Carname field.`xqㅇㅋ    ㄴ1₩ㄴㅁㅈㄷ
+// This message contains an 8-byte Carname field.
 typedef struct __attribute__((packed)) {
     uint8_t Carname[8]; // Assumed to be an ASCII string (not null-terminated)
 } VIN_car_info_t;

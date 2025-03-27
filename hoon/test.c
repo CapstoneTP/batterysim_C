@@ -31,7 +31,7 @@ int modified_value = 0;
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
-    printf("Battery: [");
+    printf("\rBattery: [");
     for (i = 0; i < bar_length; i++) {
         printf("=");
     }
@@ -43,7 +43,7 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 }
 
 void print_temp(){
-
+    
 }
 
 
@@ -66,7 +66,7 @@ pthread_mutex_t lock; // mutex to use structure-located-memory
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
-    pthread_mutex_lock(&lock);
+    // pthread_mutex_lock(&lock);                           <- occur error if lock mutex. but why?? ??
     memcpy(can_msgs[0].data, &bms_company_info, 8);
     memcpy(can_msgs[1].data, &vin_car_info, 8);
     memcpy(can_msgs[2].data, &bms_status, 6);
@@ -76,7 +76,7 @@ void refresh_CAN_container() {
     memcpy(can_msgs[6].data, &bms_temperature, 6);
     memcpy(can_msgs[7].data, &bms_resistance, 6);
     memcpy(can_msgs[8].data, &bms_dc_charging, 8);
-    pthread_mutex_unlock(&lock);
+    // pthread_mutex_unlock(&lock);
 }
 
 // User input thread    ||fix CAN data belongs to user input
@@ -95,8 +95,7 @@ void *input_thread(void *arg) {
             } else {
                 if (index == 10) {
                     pthread_mutex_lock(&lock);
-                    bms_company_info.CompanyName[0]++;
-                    ifinput = 1;
+                    bms_soc.SOC = value;
                     pthread_mutex_unlock(&lock);
                 }
             }
@@ -158,6 +157,7 @@ void *can_sender_thread(void *arg) {
     return NULL;
 }
 void *print_screen_thread(void *arg) {
+    printf(CLEAR_SCREEN);
     while(1) {
         pthread_mutex_lock(&lock);
         int local_ifinput = ifinput;
@@ -168,6 +168,7 @@ void *print_screen_thread(void *arg) {
         pthread_mutex_unlock(&lock);
         if (1 == local_ifinput) {
             printf("%d번쨰 인덱스 수정됨 >> 값 0x%02x\n", local_modified_index, local_modified_value);
+            local_ifinput = 0;
             fflush(stdout);
         }
         // printf("\r");
@@ -183,8 +184,6 @@ int main() {
     pthread_t tid1, tid2, tid3;
     
     pthread_mutex_init(&lock, NULL);
-
-    
     
     // start InputThread && CANtxThread
     pthread_create(&tid1, NULL, input_thread, NULL);
