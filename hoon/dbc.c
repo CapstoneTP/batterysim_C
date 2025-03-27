@@ -46,7 +46,7 @@ BMS_SOC_t bms_soc = {
     .SOC = 0x64,
     .DOD = 0x0000,
     .Capacity = 0x0000,
-    .SOH = 0x7F
+    .SOH = 0x5F             //95%
 };
 
 // Reset (ID: 1575, 0x627)

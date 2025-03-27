@@ -28,7 +28,7 @@ int modified_index = 0;
 int modified_value = 0;
 
 
-void print_battery_bar(int soc){
+void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
     printf("Battery: [");
@@ -40,7 +40,11 @@ void print_battery_bar(int soc){
     }
     printf("] %d%%", soc);
     fflush(stdout);
+}
 
+void print_temp(){
+
+}
 
 
 
@@ -62,6 +66,7 @@ pthread_mutex_t lock; // mutex to use structure-located-memory
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
+    pthread_mutex_lock(&lock);
     memcpy(can_msgs[0].data, &bms_company_info, 8);
     memcpy(can_msgs[1].data, &vin_car_info, 8);
     memcpy(can_msgs[2].data, &bms_status, 6);
@@ -71,6 +76,7 @@ void refresh_CAN_container() {
     memcpy(can_msgs[6].data, &bms_temperature, 6);
     memcpy(can_msgs[7].data, &bms_resistance, 6);
     memcpy(can_msgs[8].data, &bms_dc_charging, 8);
+    pthread_mutex_unlock(&lock);
 }
 
 // User input thread    ||fix CAN data belongs to user input
@@ -87,7 +93,7 @@ void *input_thread(void *arg) {
                 ifinput = 1;
                 pthread_mutex_unlock(&lock);
             } else {
-                if (index == 5) {
+                if (index == 10) {
                     pthread_mutex_lock(&lock);
                     bms_company_info.CompanyName[0]++;
                     ifinput = 1;
@@ -152,6 +158,23 @@ void *can_sender_thread(void *arg) {
     return NULL;
 }
 void *print_screen_thread(void *arg) {
+    while(1) {
+        pthread_mutex_lock(&lock);
+        int local_ifinput = ifinput;
+        int local_modified_index = modified_index;
+        int local_modified_value = modified_value;
+        int soc = bms_soc.SOC;
+        ifinput = 0;
+        pthread_mutex_unlock(&lock);
+        if (1 == local_ifinput) {
+            printf("%d번쨰 인덱스 수정됨 >> 값 0x%02x\n", local_modified_index, local_modified_value);
+            fflush(stdout);
+        }
+        // printf("\r");
+        print_battery_bar(soc);
+
+        usleep(100000);
+    }
 
 }
 

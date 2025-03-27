@@ -10,20 +10,20 @@ set dbc structures
 set fixed CAN frame
 =================================================================*/
 
-// Structure for BMS_Company_Info (ID: 1568)
+// Structure for BMS_Company_Info (ID: 1568, 0x620)
 // This message contains an 8-byte CompanyName field.
 typedef struct __attribute__((packed)) {
     uint8_t CompanyName[8]; // Assumed to be an ASCII string (not null-terminated)
 } BMS_Company_Info_t;
 
 
-// Structure for VIN_car_info (ID: 1569)
-// This message contains an 8-byte Carname field.
+// Structure for VIN_car_info (ID: 1569, 0x621)
+// This message contains an 8-byte Carname field.`xqㅇㅋ    ㄴ1₩ㄴㅁㅈㄷ
 typedef struct __attribute__((packed)) {
     uint8_t Carname[8]; // Assumed to be an ASCII string (not null-terminated)
 } VIN_car_info_t;
 
-// Structure for BMS_Status (ID: 1570)
+// Structure for BMS_Status (ID: 1570, 0x622)
 // Message layout: 1 byte Status, 2 bytes Time, 1 byte Flags, 1 byte DTC1, 1 byte DTC2.
 typedef struct __attribute__((packed)) {
     uint8_t  Status;   // 8 bits: Status
@@ -33,7 +33,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  DTC2;     // 8 bits: Diagnostic Trouble Code 2
 } BMS_Status_t;
 
-// Structure for BMS_Battery_Info (ID: 1571)
+// Structure for BMS_Battery_Info (ID: 1571, 0x623)
 // Message layout: 2 bytes Voltage, 1 byte MinVoltage, 1 byte MinVoltageID,
 // 1 byte MaxVoltage, 1 byte MaxVoltageID.
 typedef struct __attribute__((packed)) {
@@ -44,7 +44,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  MaxVoltageID;  // 8 bits: Identifier for maximum voltage
 } BMS_Battery_Info_t;
 
-// Structure for BMS_Charge_Current_Limits (ID: 1572)
+// Structure for BMS_Charge_Current_Limits (ID: 1572, 0x624)
 // Message layout: 2 bytes Current, 2 bytes ChargeLimit, 2 bytes DischargeLimit.
 typedef struct __attribute__((packed)) {
     int16_t  Current;         // 16 bits: Charge/Discharge Current (in A, may be negative)
@@ -52,7 +52,7 @@ typedef struct __attribute__((packed)) {
     uint16_t DischargeLimit;  // 16 bits: Maximum Discharge Limit (in A)
 } BMS_Charge_Current_Limits_t;
 
-// Structure for BMS_SOC (ID: 1574)
+// Structure for BMS_SOC (ID: 1574, 0x626)
 // Message layout: 1 byte SOC, 2 bytes DOD, 2 bytes Capacity, 1 byte SOH.
 typedef struct __attribute__((packed)) {
     uint8_t  SOC;       // 8 bits: State of Charge (in %)
@@ -61,7 +61,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  SOH;       // 8 bits: State of Health (in %)
 } BMS_SOC_t;
 
-// Structure for BMS_Temperature (ID: 1575)
+// Structure for BMS_Temperature (ID: 1575, 0x627)
 // Message layout: 1 byte Temperature, 1 byte AirTemp, 1 byte MinTemp, 1 byte MinTempID,
 // 1 byte MaxTemp, 1 byte MaxTempID.
 typedef struct __attribute__((packed)) {
@@ -73,7 +73,7 @@ typedef struct __attribute__((packed)) {
     uint8_t MaxTempID;    // 8 bits: Identifier for maximum temperature
 } BMS_Temperature_t;
 
-// Structure for BMS_Resistance (ID: 1576)
+// Structure for BMS_Resistance (ID: 1576, 0x628)
 // Message layout: 2 bytes Resistance, 1 byte MinResistance, 1 byte MinResistanceID,
 // 1 byte MaxResistance, 1 byte MaxResistanceID.
 typedef struct __attribute__((packed)) {
@@ -84,7 +84,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  MaxResistanceID; // 8 bits: Identifier for maximum resistance
 } BMS_Resistance_t;
 
-// Structure for BMS_DC_Charging (ID: 1577)
+// Structure for BMS_DC_Charging (ID: 1577, 0x629)
 // Message layout: 2 bytes DCLineVoltage, 2 bytes DCLineCurrent,
 // 1 byte MaxChargeCurrent, 1 byte MaxDischargeCurrent, 2 bytes DCLinePower.
 typedef struct __attribute__((packed)) {
