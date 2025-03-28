@@ -32,7 +32,7 @@ all_headers.h
 #define CURSOR_HIDE "\033[?25l"
 #define CURSOR_SHOW "\033[?25h"
 #define SET_CURSOR_UL "\033[H"
-#define CURSOR_UP "\033[1A]"
+#define CURSOR_UP "\033[1A"
 
 //userdefined headers
 #include "dbc.h"

@@ -8,12 +8,15 @@ Press A to add value in index
 
 /*================================================================
 ToDoLiSt
+- [ ] if this option selected, means this code works well
+    - [x] if this option selected, means this code need fix, check '<<- need fix'
 - [ ] have to printf(CURSOR_SHOW); before terminate program
     - [ ] try 'int running = 1;
     - [ ] try sighandler
     - [ ] try atexit
+- [ ] get input of number, change value of batter soc and ...
+- [x] erase '<<- delete'
 =================================================================*/
-
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -24,6 +27,8 @@ ToDoLiSt
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
 //set cursor position
+
+pthread_mutex_t lock; // mutex to use structure-located-mem
 
 typedef struct {
     uint32_t id;      // CAN ID
@@ -40,6 +45,7 @@ int modified_value = 0;
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
+    
     printf("\rBattery: [");
     for (i = 0; i < bar_length; i++) {
         printf("=");
@@ -52,7 +58,12 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 }
 
 void print_temp(){
-    
+    pthread_mutex_lock(&lock);
+    int temp1 = battery[1].batterytemp;
+    int temp2 = battery[2].batterytemp;
+    pthread_mutex_unlock(&lock);
+
+    printf("  Temperature: [C1:%d°C] [C2:%d°C]", temp1, temp2);
 }
 
 void print_logo() {
@@ -69,7 +80,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝ ver0.1\n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver.20213   \n"
         "                           \n";
 
     printf("%s", logo);
@@ -90,8 +101,6 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
     {0x629, {0}, 8}         //bms_dc_charging
 };
 
-pthread_mutex_t lock; // mutex to use structure-located-memory
-
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
@@ -109,33 +118,32 @@ void refresh_CAN_container() {
 
 // User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
-    int index, value;
-    
-    while (1) {
-        if (scanf("%d %x", &index, &value) == 2) {
-            if (index >= 0 && index < MAX_STRUCTS) {
-                pthread_mutex_lock(&lock);
-                modified_index = index;
-                modified_value = value;
-                can_msgs[index].data[0] = (uint8_t)value;
-                ifinput = 1;
-                pthread_mutex_unlock(&lock);
-            } else {
-                if (index == 10) {
-                    pthread_mutex_lock(&lock);
-                    modified_index = index;
-                    modified_value = value;
-                    bms_soc.SOC = value;
-                    ifinput = 1;
-                    pthread_mutex_unlock(&lock);
-                }
-            }
-        } else {
-            printf("입력 오류");
-            while (getchar() != '\n'); // buffer clear
+    char key_input = 0;
+    int invalid_input = 0;
+    while(1) {
+        // if (invalid_input) printf("Invalid input\n"); <<- need fix
+        // invalid_input = 0;
+        scanf("%c", &key_input);
+        pthread_mutex_lock(&lock);
+        switch(key_input) {
+            case 'a':
+                battery[1].batterytemp--;
+                break;
+            case 's':
+                battery[1].batterytemp++;
+                break;
+            case 'd':
+                bms_soc.SOC--;
+                break;
+            case 'f':
+                bms_soc.SOC++;
+                break;
+            default:
+                invalid_input = 1;
         }
+        ifinput = 1;
+        pthread_mutex_unlock(&lock);
     }
-    return NULL;
 }
 
 // CAN tx thread
@@ -195,19 +203,15 @@ void *print_screen_thread(void *arg) {
     while(1) {
         pthread_mutex_lock(&lock);
         int local_ifinput = ifinput;
-        int local_modified_index = modified_index;
-        int local_modified_value = modified_value;
         int soc = bms_soc.SOC;
         ifinput = 0;
         pthread_mutex_unlock(&lock);
-        if (1 == local_ifinput) {
+        if (local_ifinput) {
             printf(CURSOR_UP);
-            printf("\r%d번쨰 인덱스 수정됨 >> 값 0x%02x                                            \n", local_modified_index, local_modified_value);
             local_ifinput = 0;
-            fflush(stdout);
         }
-        // printf("\r");
         print_battery_bar(soc);
+        print_temp();
 
         usleep(100000);
     }
