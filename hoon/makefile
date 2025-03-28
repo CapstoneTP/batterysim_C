@@ -3,11 +3,11 @@
 # =====================================================================
 
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I.
+CFLAGS = -Wall -Wextra -g -I -lpthread.
 
 TARGET = bms_simulator
 
-SRCS = main.c
+SRCS = main.c dbc.c
 
 OBJS = $(SRCS:.c=.o)
 $(info OBJS=$(OBJS))

@@ -20,6 +20,8 @@ Parameters:
 #define SLEEPTIME 100000  //500ms
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
+#define LOAD_TIME 100       // load time (unit: ms)
+//set cursor position
 
 typedef struct {
     uint32_t id;      // CAN ID
@@ -27,6 +29,7 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
+int running = 1;    // <<- try
 int ifinput = 0;
 int modified_index = 0;
 int modified_value = 0;
@@ -224,7 +227,7 @@ int main() {
     pthread_join(tid1, NULL);
     pthread_join(tid2, NULL);
     pthread_join(tid3, NULL);
-    
+
     pthread_mutex_destroy(&lock);
 
 }
