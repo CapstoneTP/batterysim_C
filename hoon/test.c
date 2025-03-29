@@ -15,7 +15,7 @@ ToDoLiSt
     - [ ] try sighandler
     - [ ] try atexit
 - [ ] get input of number, change value of batter soc and ...
-- [x] erase '<<- delete'
+- [ ] erase '<<- delete'
 =================================================================*/
 
 //input_thread
@@ -80,7 +80,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver.20213   \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver.20221   \n"
         "                           \n";
 
     printf("%s", logo);
@@ -123,20 +123,21 @@ void *input_thread(void *arg) {
     while(1) {
         // if (invalid_input) printf("Invalid input\n"); <<- need fix
         // invalid_input = 0;
-        scanf("%c", &key_input);
+        key_input = getchar();
+        // scanf("%c", &key_input); <<- delete
         pthread_mutex_lock(&lock);
         switch(key_input) {
             case 'a':
-                battery[1].batterytemp--;
+                if (battery[1].batterytemp > 0) battery[1].batterytemp--;
                 break;
             case 's':
-                battery[1].batterytemp++;
+                if (battery[1].batterytemp < 100) battery[1].batterytemp++;
                 break;
             case 'd':
-                bms_soc.SOC--;
+                if (bms_soc.SOC > 0) bms_soc.SOC--;
                 break;
             case 'f':
-                bms_soc.SOC++;
+                if (bms_soc.SOC < 100) bms_soc.SOC++;
                 break;
             default:
                 invalid_input = 1;
@@ -206,10 +207,10 @@ void *print_screen_thread(void *arg) {
         int soc = bms_soc.SOC;
         ifinput = 0;
         pthread_mutex_unlock(&lock);
-        if (local_ifinput) {
-            printf(CURSOR_UP);
-            local_ifinput = 0;
-        }
+        // if (local_ifinput) {
+        //     printf(CURSOR_UP); //<<- delete
+        //     local_ifinput = 0;
+        // }
         print_battery_bar(soc);
         print_temp();
 
@@ -220,8 +221,21 @@ void *print_screen_thread(void *arg) {
 
 int main() {
     printf(CLEAR_SCREEN);              //clear whole screen
+
+
+    // Get input without buffer ('\n')
+    struct termios newt, oldt;
+    // Get current terminal settings
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    // Disable canonical mode and echo
+    newt.c_lflag &= ~(ICANON | ECHO);
+    // Apply new settings immediately
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     pthread_t tid1, tid2, tid3;
     
+
     pthread_mutex_init(&lock, NULL);
     
     // start InputThread && CANtxThread

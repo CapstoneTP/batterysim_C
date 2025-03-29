@@ -19,6 +19,7 @@ all_headers.h
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <termios.h>
 
 //MACORS for color printing
 #define BLUE    "\033[34m"
