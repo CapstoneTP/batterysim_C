@@ -10,10 +10,8 @@ Press A to add value in index
 ToDoLiSt
 - [ ] if this option selected, means this code works well
     - [x] if this option selected, means this code need fix, check '<<- need fix'
-- [ ] have to printf(CURSOR_SHOW); before terminate program
-    - [ ] try 'int running = 1;
-    - [ ] try sighandler
-    - [ ] try atexit
+- [x] have to printf(CURSOR_SHOW); before terminate program
+    - [x] try 'int running = 1;
 - [ ] get input of number, change value of batter soc and ...
 - [ ] erase '<<- delete'
 =================================================================*/
@@ -42,10 +40,9 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
-int running = 1;    // <<- try
+int ifrunning = 1;    // <<- try
 int ifinput = 0;
 int ifcharge = 0;
-
 
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
@@ -86,7 +83,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver.2101   \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver.211   \n"
         "                           \n";
 
     printf("%s", logo);
@@ -126,7 +123,7 @@ void refresh_CAN_container() {
 void *input_thread(void *arg) {
     char key_input = 0;
     int invalid_input = 0;
-    while(1) {
+    while(ifrunning) {
         // if (invalid_input) printf("Invalid input\n"); <<- need fix
         // invalid_input = 0;
         key_input = getchar();
@@ -148,8 +145,11 @@ void *input_thread(void *arg) {
             case 'G':
                 if (bms_soc.SOC < 100) bms_soc.SOC++;
                 break;
-            case '224' :
-                
+            case '\033' :       //esc key pressed
+                ifrunning = 0;
+                pthread_mutex_unlock(&lock);
+                return NULL;
+
             default:
                 invalid_input = 1;
         }
@@ -188,7 +188,7 @@ void *can_sender_thread(void *arg) {
     }
 
     // CAN packet tx loop
-    while (1) {
+    while (ifrunning) {
         for (int i = 0; i < MAX_STRUCTS; i++) {
             pthread_mutex_lock(&lock);
             refresh_CAN_container();
@@ -212,7 +212,7 @@ void *print_screen_thread(void *arg) {
     printf(CURSOR_HIDE);
     printf(SET_CURSOR_UL);
     print_logo();
-    while(1) {
+    while(ifrunning) {
         pthread_mutex_lock(&lock);
         int local_ifinput = ifinput;
         int soc = bms_soc.SOC;
@@ -272,4 +272,9 @@ int main() {
 
     pthread_mutex_destroy(&lock);
 
+    printf(CURSOR_SHOW);
+    printf("\n");
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return 0;
 }
