@@ -12,7 +12,6 @@ Parameters:
     - batterySOH
 ==================================================================*/
 
-
 //input_thread
 #define MAX_STRUCTS 9
 //CAN_sender_thread
@@ -23,13 +22,14 @@ Parameters:
 #define LOAD_TIME 100       // load time (unit: ms)
 //set cursor position
 
+pthread_mutex_t lock; // mutex to use structure-located-mem
+
 typedef struct {
     uint32_t id;      // CAN ID
     uint8_t data[8];  // CAN data
     uint8_t len;      // data length
 } CAN_Message;
 
-int running = 1;    // <<- try
 int ifinput = 0;
 int modified_index = 0;
 int modified_value = 0;
@@ -38,6 +38,7 @@ int modified_value = 0;
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
+    
     printf("\rBattery: [");
     for (i = 0; i < bar_length; i++) {
         printf("=");
@@ -50,7 +51,12 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 }
 
 void print_temp(){
-    
+    pthread_mutex_lock(&lock);
+    int temp1 = battery[1].batterytemp;
+    int temp2 = battery[2].batterytemp;
+    pthread_mutex_unlock(&lock);
+
+    printf("  Temperature: [C1:%d°C] [C2:%d°C]", temp1, temp2);
 }
 
 void print_logo() {
@@ -67,7 +73,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝ ver0.1\n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver.21   \n"
         "                           \n";
 
     printf("%s", logo);
@@ -88,8 +94,6 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
     {0x629, {0}, 8}         //bms_dc_charging
 };
 
-pthread_mutex_t lock; // mutex to use structure-located-memory
-
 // User defiend function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
@@ -107,33 +111,30 @@ void refresh_CAN_container() {
 
 // User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
-    int index, value;
-    
-    while (1) {
-        if (scanf("%d %x", &index, &value) == 2) {
-            if (index >= 0 && index < MAX_STRUCTS) {
-                pthread_mutex_lock(&lock);
-                modified_index = index;
-                modified_value = value;
-                can_msgs[index].data[0] = (uint8_t)value;
-                ifinput = 1;
-                pthread_mutex_unlock(&lock);
-            } else {
-                if (index == 10) {
-                    pthread_mutex_lock(&lock);
-                    modified_index = index;
-                    modified_value = value;
-                    bms_soc.SOC = value;
-                    ifinput = 1;
-                    pthread_mutex_unlock(&lock);
-                }
-            }
-        } else {
-            printf("입력 오류");
-            while (getchar() != '\n'); // buffer clear
+    char key_input = 0;
+    int invalid_input = 0;
+    while(1) {
+        key_input = getchar();
+        pthread_mutex_lock(&lock);
+        switch(key_input) {
+            case 'a':
+                if (battery[1].batterytemp > 0) battery[1].batterytemp--;
+                break;
+            case 's':
+                if (battery[1].batterytemp < 100) battery[1].batterytemp++;
+                break;
+            case 'd':
+                if (bms_soc.SOC > 0) bms_soc.SOC--;
+                break;
+            case 'f':
+                if (bms_soc.SOC < 100) bms_soc.SOC++;
+                break;
+            default:
+                invalid_input = 1;
         }
+        ifinput = 1;
+        pthread_mutex_unlock(&lock);
     }
-    return NULL;
 }
 
 // CAN tx thread
@@ -193,19 +194,11 @@ void *print_screen_thread(void *arg) {
     while(1) {
         pthread_mutex_lock(&lock);
         int local_ifinput = ifinput;
-        int local_modified_index = modified_index;
-        int local_modified_value = modified_value;
         int soc = bms_soc.SOC;
         ifinput = 0;
         pthread_mutex_unlock(&lock);
-        if (1 == local_ifinput) {
-            printf(CURSOR_UP);
-            printf("\r%d번쨰 인덱스 수정됨 >> 값 0x%02x                                            \n", local_modified_index, local_modified_value);
-            local_ifinput = 0;
-            fflush(stdout);
-        }
-        // printf("\r");
         print_battery_bar(soc);
+        print_temp();
 
         usleep(100000);
     }
@@ -214,8 +207,21 @@ void *print_screen_thread(void *arg) {
 
 int main() {
     printf(CLEAR_SCREEN);              //clear whole screen
+
+
+    // Get input without buffer ('\n')
+    struct termios newt, oldt;
+    // Get current terminal settings
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    // Disable canonical mode and echo
+    newt.c_lflag &= ~(ICANON | ECHO);
+    // Apply new settings immediately
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     pthread_t tid1, tid2, tid3;
     
+
     pthread_mutex_init(&lock, NULL);
     
     // start InputThread && CANtxThread
