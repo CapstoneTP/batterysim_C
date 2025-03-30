@@ -100,6 +100,7 @@ typedef struct __attribute__((packed)) {
     uint16_t batteryvoltage;
     uint8_t batterycurrent;
     uint8_t batterySOH;
+    uint16_t DesignedCapacity;
 } Battery_t;
 
 
