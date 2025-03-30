@@ -52,8 +52,8 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_temp(){
     pthread_mutex_lock(&lock);
-    int temp1 = battery[1].batterytemp;
-    int temp2 = battery[2].batterytemp;
+    int temp1 = battery[0].batterytemp;
+    int temp2 = battery[1].batterytemp;
     pthread_mutex_unlock(&lock);
 
     printf("  Temperature: [C1:%d°C] [C2:%d°C]", temp1, temp2);
@@ -118,10 +118,10 @@ void *input_thread(void *arg) {
         pthread_mutex_lock(&lock);
         switch(key_input) {
             case 'a':
-                if (battery[1].batterytemp > 0) battery[1].batterytemp--;
+                if (battery[0].batterytemp > 0) battery[0].batterytemp--;
                 break;
             case 's':
-                if (battery[1].batterytemp < 100) battery[1].batterytemp++;
+                if (battery[0].batterytemp < 100) battery[0].batterytemp++;
                 break;
             case 'd':
                 if (bms_soc.SOC > 0) bms_soc.SOC--;

@@ -28,6 +28,12 @@ ToDoLiSt
 #define LOAD_TIME 100       // load time (unit: ms)
 //set cursor position
 
+//handle arrow key input
+#define LEFT 75
+#define RIGHT 77
+#define UP 72
+#define DOWN 80
+
 pthread_mutex_t lock; // mutex to use structure-located-mem
 
 typedef struct {
@@ -38,8 +44,7 @@ typedef struct {
 
 int running = 1;    // <<- try
 int ifinput = 0;
-int modified_index = 0;
-int modified_value = 0;
+int ifcharge = 0;
 
 
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
@@ -59,11 +64,12 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_temp(){
     pthread_mutex_lock(&lock);
-    int temp1 = battery[1].batterytemp;
-    int temp2 = battery[2].batterytemp;
+    int temp1 = battery[0].batterytemp;
+    int temp2 = battery[1].batterytemp;
+    int print_ifcharge = ifcharge;
     pthread_mutex_unlock(&lock);
 
-    printf("  Temperature: [C1:%d°C] [C2:%d°C]", temp1, temp2);
+    printf("  Temperature: [C1:%d°C] [C2:%d°C], charge?: %d", temp1, temp2, print_ifcharge);
 }
 
 void print_logo() {
@@ -80,7 +86,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver.21   \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver.2101   \n"
         "                           \n";
 
     printf("%s", logo);
@@ -127,18 +133,23 @@ void *input_thread(void *arg) {
         // scanf("%c", &key_input); <<- delete
         pthread_mutex_lock(&lock);
         switch(key_input) {
+            case ' ':
+                ifcharge =!ifcharge;
+                break;
             case 'a':
-                if (battery[1].batterytemp > 0) battery[1].batterytemp--;
+                if (battery[0].batterytemp > 0) battery[0].batterytemp--;
                 break;
-            case 's':
-                if (battery[1].batterytemp < 100) battery[1].batterytemp++;
+            case 'A':
+                if (battery[0].batterytemp < 100) battery[0].batterytemp++;
                 break;
-            case 'd':
+            case 'g':
                 if (bms_soc.SOC > 0) bms_soc.SOC--;
                 break;
-            case 'f':
+            case 'G':
                 if (bms_soc.SOC < 100) bms_soc.SOC++;
                 break;
+            case '224' :
+                
             default:
                 invalid_input = 1;
         }
@@ -217,6 +228,17 @@ void *print_screen_thread(void *arg) {
         usleep(100000);
     }
 
+}
+
+void *charge_batterypack(void *arg) {
+    pthread_mutex_lock(&lock);
+    int local_ifcharge = ifcharge;
+    pthread_mutex_lock(&lock);
+
+    if (local_ifcharge) {
+        //while charging logic
+
+    }
 }
 
 int main() {
