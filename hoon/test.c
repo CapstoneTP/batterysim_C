@@ -86,7 +86,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.2121  \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.2122  \n"
         "                           \n";
 
     printf("%s", logo);
@@ -126,14 +126,13 @@ void refresh_CAN_container() {
 void *input_thread(void *arg) {
     char key_input = 0;
     int invalid_input = 0;
+    int input_mode = 0;
     while(ifrunning) {
-        // if (invalid_input) printf("Invalid input\n"); <<- need fix
-        // invalid_input = 0;
         key_input = getchar();
         // scanf("%c", &key_input); <<- delete
         pthread_mutex_lock(&lock);
         switch(key_input) {
-            case ' ':
+            case ' ':       //whiespace key pressed
                 ifcharge =!ifcharge;
                 break;
             case 'a':
@@ -148,13 +147,34 @@ void *input_thread(void *arg) {
             case 'G':
                 if (bms_soc.SOC < 100) bms_soc.SOC++;
                 break;
-            case '\033' :       //esc key pressed
-                ifrunning = 0;
-                pthread_mutex_unlock(&lock);
-                return NULL;
-
+            case '\033': { // ESC || arrow key and...
+                // Check if this is an arrow key sequence
+                char next_char = getchar();
+                if (next_char == '[') {
+                    char arrow = getchar();
+                    switch (arrow) {
+                        case 'A':   // Up arrow
+                            if (battery[1].batterytemp < 100)
+                                battery[1].batterytemp++;
+                            break;
+                        case 'B':   // Down arrow
+                            if (battery[1].batterytemp > 0)
+                                battery[1].batterytemp--;
+                            break;
+                        default:
+                            invalid_input = 1;
+                    }
+                } else {
+                    // simple ESC input
+                    ifrunning = 0;
+                    pthread_mutex_unlock(&lock);
+                    return NULL;
+                }
+                break;
+            }
             default:
                 invalid_input = 1;
+                break;
         }
         ifinput = 1;
         pthread_mutex_unlock(&lock);
