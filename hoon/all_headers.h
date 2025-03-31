@@ -33,7 +33,7 @@ all_headers.h
 
 #define YELLOW_BG   "\033[43m"
 #define BLUE_BG "\033[44m"
-#define HIGHLIGHT "\033[33m \033[41m"
+#define HIGHLIGHT "\033[33m\033[41m"
 
 
 //MACORS for setting cursor position
