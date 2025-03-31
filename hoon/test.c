@@ -28,10 +28,10 @@ ToDoLiSt
 #define RANDOM_PERCENT 20
 
 //handle arrow key input
-#define LEFT 75
-#define RIGHT 77
-#define UP 72
-#define DOWN 80
+#define LEFT 'D'
+#define RIGHT 'C'
+#define UP 'A'
+#define DOWN 'B'
 
 pthread_mutex_t lock; // mutex to use structure-located-mem
 
@@ -41,23 +41,32 @@ typedef struct {
     uint8_t len;      // data length
 } CAN_Message;
 
-int ifrunning = 1;    // <<- try
-int ifinput = 0;
+int ifrunning = 1;
 int ifcharge = 0;
+int input_mode = 0;
 
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
     
-    printf("\rBattery: [");
+    printf("Battery: [");
     for (i = 0; i < bar_length; i++) {
         printf("=");
     }
     for (; i < BAR_WIDTH; i++) {
         printf(" ");
     }
-    printf("] %d%%", soc);
+    printf("] %d%%\n", soc);
     fflush(stdout);
+}
+
+void print_inputmode(int mode) {
+    switch(mode) {
+        case 0: printf(HIGHLIGHT "[C1temp] " RESET "[C1voltage] [C2temp] [C2voltage]\n"); break;
+        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage] " RESET "[C2temp] [C2voltage]\n"); break;
+        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp] " RESET "[C2voltage]\n"); break;
+        case 3: printf("[C1temp] [C1voltage] [C2temp] " HIGHLIGHT "[C2voltage]\n" RESET); break;
+    }
 }
 
 void print_temp(){
@@ -67,9 +76,12 @@ void print_temp(){
     long voltage1 = battery[0].batteryvoltage;
     long voltage2 = battery[1].batteryvoltage;
     int print_ifcharge = ifcharge;
+    
     pthread_mutex_unlock(&lock);
 
-    printf("[C1:%d°C, %ldv] [C2:%d°C, %ldv], charge?: %d", temp1, voltage1, temp2, voltage2, print_ifcharge);
+    printf("[C1:%d°C, %ldv] [C2:%d°C, %ldv]", temp1, voltage1, temp2, voltage2);
+    if (ifcharge) printf(GREEN"  charging                    " RESET);
+    if (!ifcharge) printf(RED "  not charging now" RESET);
 }
 
 void print_logo() {
@@ -86,7 +98,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.2122  \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.3 \n"
         "                           \n";
 
     printf("%s", logo);
@@ -126,7 +138,6 @@ void refresh_CAN_container() {
 void *input_thread(void *arg) {
     char key_input = 0;
     int invalid_input = 0;
-    int input_mode = 0;
     while(ifrunning) {
         key_input = getchar();
         // scanf("%c", &key_input); <<- delete
@@ -153,13 +164,19 @@ void *input_thread(void *arg) {
                 if (next_char == '[') {
                     char arrow = getchar();
                     switch (arrow) {
-                        case 'A':   // Up arrow
+                        case UP:   // Up arrow
                             if (battery[1].batterytemp < 100)
                                 battery[1].batterytemp++;
                             break;
-                        case 'B':   // Down arrow
+                        case DOWN:   // Down arrow
                             if (battery[1].batterytemp > 0)
                                 battery[1].batterytemp--;
+                            break;
+                        case RIGHT: // Right arrow
+                            if (input_mode < 3) input_mode++;
+                            break;
+                        case LEFT: // Left arrow
+                            if (input_mode > 0) input_mode--;
                             break;
                         default:
                             invalid_input = 1;
@@ -176,7 +193,6 @@ void *input_thread(void *arg) {
                 invalid_input = 1;
                 break;
         }
-        ifinput = 1;
         pthread_mutex_unlock(&lock);
     }
 }
@@ -233,18 +249,14 @@ void *can_sender_thread(void *arg) {
 void *print_screen_thread(void *arg) {
     printf(CLEAR_SCREEN);
     printf(CURSOR_HIDE);
-    printf(SET_CURSOR_UL);
-    print_logo();
     while(ifrunning) {
+        printf(SET_CURSOR_UL);
         pthread_mutex_lock(&lock);
-        int local_ifinput = ifinput;
         int soc = bms_soc.SOC;
-        ifinput = 0;
+        int local_input_mode = input_mode;
         pthread_mutex_unlock(&lock);
-        // if (local_ifinput) {
-        //     printf(CURSOR_UP); //<<- delete
-        //     local_ifinput = 0;
-        // }
+        print_logo();
+        print_inputmode(local_input_mode);
         print_battery_bar(soc);
         print_temp();
 

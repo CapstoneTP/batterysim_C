@@ -24,11 +24,17 @@ all_headers.h
 #include <sys/time.h>
 
 //MACORS for color printing
+#define BLACK  "\033[30m" 
 #define BLUE    "\033[34m"
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 #define RED     "\033[31m"
 #define RESET   "\033[0m"
+
+#define YELLOW_BG   "\033[43m"
+#define BLUE_BG "\033[44m"
+#define HIGHLIGHT "\033[33m \033[41m"
+
 
 //MACORS for setting cursor position
 #define CLEAR_SCREEN "\033[1J"
