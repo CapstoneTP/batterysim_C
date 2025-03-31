@@ -8,12 +8,9 @@ Press A to add value in index
 
 /*================================================================
 ToDoLiSt
-- [ ] if this option selected, means this code works well
-    - [x] if this option selected, means this code need fix, check '<<- need fix'
-- [x] have to printf(CURSOR_SHOW); before terminate program
-    - [x] try 'int running = 1;
-- [ ] get input of number, change value of batter soc and ...
-- [ ] erase '<<- delete'
+- [X] if this option selected, means this code works well
+    - [ ] if this option selected, means this code need fix, check '<<- need fix'
+- [X] erase '<<- delete'
 =================================================================*/
 
 //input_thread
@@ -62,9 +59,9 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_inputmode(int mode) {
     switch(mode) {
-        case 0: printf(HIGHLIGHT "[C1temp] " RESET "[C1voltage] [C2temp] [C2voltage]\n\n"); break;
-        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage] " RESET "[C2temp] [C2voltage]\n\n"); break;
-        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp] " RESET "[C2voltage]\n\n"); break;
+        case 0: printf(HIGHLIGHT "[C1temp]" RESET " [C1voltage] [C2temp] [C2voltage]\n\n"); break;
+        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage]" RESET " [C2temp] [C2voltage]\n\n"); break;
+        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp]" RESET " [C2voltage]\n\n"); break;
         case 3: printf("[C1temp] [C1voltage] [C2temp] " HIGHLIGHT "[C2voltage]\n\n" RESET); break;
     }
 }
@@ -87,18 +84,18 @@ void print_temp(){
 void print_logo() {
     const char *logo =
         "██████╗ ███╗   ███╗███████╗\n"
-        "██╔══██╗████╗ ████║██╔════╝\n"
-        "██████╔╝██╔████╔██║███████╗\n"
-        "██╔══██╗██║╚██╔╝██║╚════██║\n"
-        "██████╔╝██║ ╚═╝ ██║███████║\n"
+        "██╔══██╗████╗ ████║██╔════╝        Use ' ← → ' arrow keys to select value you want to change\n"
+        "██████╔╝██╔████╔██║███████╗        Use ' ↑ ↓ ' arrow keys to change value [increase or decrease]\n"
+        "██╔══██╗██║╚██╔╝██║╚════██║        Press space to toggle charging\n"
+        "██████╔╝██║ ╚═╝ ██║███████║        Press ESC twice to quit program\n"
         "╚═════╝ ╚═╝     ╚═╝╚══════╝\n"
         "                           \n"
-        "███████╗██╗███╗   ███╗     \n"
-        "██╔════╝██║████╗ ████║     \n"
-        "███████╗██║██╔████╔██║     \n"
-        "╚════██║██║██║╚██╔╝██║     \n"
-        "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.31 \n"
+        "███████╗  ██╗  ███╗   ███╗     \n"
+        "██╔════╝  ██║  ████╗ ████║     \n"
+        "███████╗  ██║  ██╔████╔██║     \n"
+        "╚════██║  ██║  ██║╚██╔╝██║     \n"
+        "███████║  ██║  ██║ ╚═╝ ██║     \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.31 \n"
         "                           \n";
 
     printf("%s", logo);
