@@ -62,10 +62,10 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 
 void print_inputmode(int mode) {
     switch(mode) {
-        case 0: printf(HIGHLIGHT "[C1temp] " RESET "[C1voltage] [C2temp] [C2voltage]\n"); break;
-        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage] " RESET "[C2temp] [C2voltage]\n"); break;
-        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp] " RESET "[C2voltage]\n"); break;
-        case 3: printf("[C1temp] [C1voltage] [C2temp] " HIGHLIGHT "[C2voltage]\n" RESET); break;
+        case 0: printf(HIGHLIGHT "[C1temp] " RESET "[C1voltage] [C2temp] [C2voltage]\n\n"); break;
+        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage] " RESET "[C2temp] [C2voltage]\n\n"); break;
+        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp] " RESET "[C2voltage]\n\n"); break;
+        case 3: printf("[C1temp] [C1voltage] [C2temp] " HIGHLIGHT "[C2voltage]\n\n" RESET); break;
     }
 }
 
@@ -98,7 +98,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.3 \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.31 \n"
         "                           \n";
 
     printf("%s", logo);
@@ -134,6 +134,35 @@ void refresh_CAN_container() {
     memcpy(can_msgs[8].data, &bms_dc_charging, 8);
 }
 
+void change_value(int mode, int ifup) {
+    if (ifup) {
+        switch(mode) {
+            case 0: 
+                if (battery[0].batterytemp < 100) battery[0].batterytemp++; break;
+            case 1:
+                if (battery[0].batteryvoltage < 500) battery[0].batteryvoltage++; break;
+            case 2:
+                if (battery[1].batterytemp < 100) battery[1].batterytemp++; break;
+            case 3:
+                if (battery[0].batteryvoltage < 500) battery[1].batteryvoltage++; break;
+            default:
+        }
+    }
+    else if (!ifup) {
+        switch(mode) {
+            case 0: 
+                if (battery[0].batterytemp > 0) battery[0].batterytemp--; break;
+            case 1:
+                if (battery[0].batteryvoltage > 0) battery[0].batteryvoltage--; break;
+            case 2:
+                if (battery[1].batterytemp > 0) battery[1].batterytemp--; break;
+            case 3:
+                if (battery[1].batteryvoltage > 0) battery[1].batteryvoltage--; break;
+            default:
+        }
+    }
+}
+
 // User input thread    ||fix CAN data belongs to user input
 void *input_thread(void *arg) {
     char key_input = 0;
@@ -165,13 +194,9 @@ void *input_thread(void *arg) {
                     char arrow = getchar();
                     switch (arrow) {
                         case UP:   // Up arrow
-                            if (battery[1].batterytemp < 100)
-                                battery[1].batterytemp++;
-                            break;
+                            change_value(input_mode, 1); break;
                         case DOWN:   // Down arrow
-                            if (battery[1].batterytemp > 0)
-                                battery[1].batterytemp--;
-                            break;
+                            change_value(input_mode, 0); break;
                         case RIGHT: // Right arrow
                             if (input_mode < 3) input_mode++;
                             break;
