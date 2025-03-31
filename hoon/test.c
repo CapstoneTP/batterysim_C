@@ -24,7 +24,8 @@ ToDoLiSt
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
-//set cursor position
+//charging_batterypack_thread
+#define RANDOM_PERCENT 20
 
 //handle arrow key input
 #define LEFT 75
@@ -63,10 +64,12 @@ void print_temp(){
     pthread_mutex_lock(&lock);
     int temp1 = battery[0].batterytemp;
     int temp2 = battery[1].batterytemp;
+    long voltage1 = battery[0].batteryvoltage;
+    long voltage2 = battery[1].batteryvoltage;
     int print_ifcharge = ifcharge;
     pthread_mutex_unlock(&lock);
 
-    printf("  Temperature: [C1:%d°C] [C2:%d°C], charge?: %d", temp1, temp2, print_ifcharge);
+    printf("[C1:%d°C, %ldv] [C2:%d°C, %ldv], charge?: %d", temp1, voltage1, temp2, voltage2, print_ifcharge);
 }
 
 void print_logo() {
@@ -83,7 +86,7 @@ void print_logo() {
         "███████╗██║██╔████╔██║     \n"
         "╚════██║██║██║╚██╔╝██║     \n"
         "███████║██║██║ ╚═╝ ██║     \n"
-        "╚══════╝╚═╝╚═╝     ╚═╝_ver.211   \n"
+        "╚══════╝╚═╝╚═╝     ╚═╝_ver 0.2121  \n"
         "                           \n";
 
     printf("%s", logo);
@@ -230,14 +233,27 @@ void *print_screen_thread(void *arg) {
 
 }
 
-void *charge_batterypack(void *arg) {
-    pthread_mutex_lock(&lock);
-    int local_ifcharge = ifcharge;
-    pthread_mutex_lock(&lock);
-
-    if (local_ifcharge) {
-        //while charging logic
-
+void *charge_batterypack_thread(void *arg) {
+    srand(time(NULL));
+    while (ifrunning) {
+        pthread_mutex_lock(&lock);
+        int local_ifcharge = ifcharge;
+        pthread_mutex_unlock(&lock);
+        if (local_ifcharge) {
+            usleep (300000);
+            //choose random chance
+            struct timespec now;
+            int random = 0;
+            random = rand() % RANDOM_PERCENT;
+            pthread_mutex_lock(&lock);
+            //increase voltage
+            battery[0].batteryvoltage++;
+            battery[1].batteryvoltage++;
+            //randomly increase temp
+            if (random == 1) battery[0].batterytemp++;
+            if (random == 2) battery[1].batterytemp++;
+            pthread_mutex_unlock(&lock);
+        }
     }
 }
 
@@ -255,7 +271,7 @@ int main() {
     // Apply new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    pthread_t tid1, tid2, tid3;
+    pthread_t tid1, tid2, tid3, tid4;
     
 
     pthread_mutex_init(&lock, NULL);
@@ -264,11 +280,13 @@ int main() {
     pthread_create(&tid1, NULL, input_thread, NULL);
     pthread_create(&tid2, NULL, can_sender_thread, NULL);
     pthread_create(&tid3, NULL, print_screen_thread, NULL);
+    pthread_create(&tid4, NULL, charge_batterypack_thread, NULL);
 
     // Main Thread wait for both threads
     pthread_join(tid1, NULL);
     pthread_join(tid2, NULL);
     pthread_join(tid3, NULL);
+    pthread_join(tid4, NULL);
 
     pthread_mutex_destroy(&lock);
 
