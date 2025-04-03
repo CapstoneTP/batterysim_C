@@ -42,6 +42,12 @@ int ifrunning = 1;
 int ifcharge = 0;
 int input_mode = 0;
 
+void init_battery_array() {
+    for (int i = 0; i < BATTERY_CELLS; i++) {
+        memcpy(&battery[i], &default_battery, sizeof(Battery_t));
+    }
+}
+
 void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
@@ -143,6 +149,7 @@ void change_value(int mode, int ifup) {
             case 3:
                 if (battery[0].batteryvoltage < 500) battery[1].batteryvoltage++; break;
             default:
+                break;
         }
     }
     else if (!ifup) {
@@ -156,6 +163,7 @@ void change_value(int mode, int ifup) {
             case 3:
                 if (battery[1].batteryvoltage > 0) battery[1].batteryvoltage--; break;
             default:
+                break;
         }
     }
 }
@@ -312,8 +320,16 @@ void *charge_batterypack_thread(void *arg) {
 }
 
 int main() {
+    setvbuf(stdout, NULL, _IONBF, 0);  // turn off buffering for stdout
     printf(CLEAR_SCREEN);              //clear whole screen
-
+    printf(SET_CURSOR_UL);
+    init_battery_array();
+    printf("waiting for battery reset .");
+    usleep(1000000);
+    printf("\rwaiting for battery reset ..");
+    usleep(300000);
+    printf("\rwaiting for battery reset ...");
+    usleep(700000);
 
     // Get input without buffer ('\n')
     struct termios newt, oldt;

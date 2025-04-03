@@ -101,6 +101,7 @@ typedef struct __attribute__((packed)) {
     uint8_t batterycurrent;
     uint8_t batterySOH;
     uint16_t DesignedCapacity;
+    uint16_t Resistance;
 } Battery_t;
 
 
@@ -116,7 +117,8 @@ extern BMS_SOC_t bms_soc;
 extern BMS_Temperature_t bms_temperature;
 extern BMS_Resistance_t bms_resistance;
 extern BMS_DC_Charging_t bms_dc_charging;
-extern Battery_t battery[2];
 
+extern Battery_t default_battery;
+extern Battery_t battery[BATTERY_CELLS];
 
 #endif // DBC_H

@@ -43,6 +43,9 @@ all_headers.h
 #define SET_CURSOR_UL "\033[H"
 #define CURSOR_UP "\033[1A"
 
+//MACROS for setting default values for dbc
+#define BATTERY_CELLS 3
+
 //userdefined headers
 #include "dbc.h"
 
