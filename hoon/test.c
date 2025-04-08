@@ -42,7 +42,6 @@ int ifrunning = 1;
 int ifcharge = 0;
 int input_mode = 0;
 int ifvoltageerror = 0; //check if battery voltage value is in range
-int air_temp = 0;
 
 /*================================================================
 functions for print screen
@@ -103,7 +102,7 @@ void print_temp(){
         printf("[C%d:%d°C, %.2fv] ", i + 1, temp[i], scale_voltage(voltage[i]));
         if ( i % 5 == 0 && i != 0) printf("\n");
     }
-    printf("[air_temp: %d]", local_air_temp);
+    printf("\n\n[air_temp: %d]", local_air_temp);
 
     if (local_ifcharge) printf(GREEN "  charging                    " RESET);
     else printf(RED "  not charging now" RESET);
