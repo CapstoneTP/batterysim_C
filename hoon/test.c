@@ -22,7 +22,7 @@ ToDoLiSt
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
 //charging_batterypack_thread
-#define RANDOM_PERCENT 20
+#define RANDOM_PERCENT 10
 
 //handle arrow key input
 #define LEFT 'D'
@@ -74,7 +74,7 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 }
 
 void print_inputmode(int mode) {
-    const char* items[] = {"air_temp", "C1temp", "C1voltage", "C2temp", "C2voltage", "air_temp"};
+    const char* items[] = {"air_temp", "C1temp", "C1voltage", "C2temp", "C2voltage"};
     const int num_items = sizeof(items) / sizeof(items[0]);
 
     for (int i = 0; i < num_items; i++) {
@@ -96,7 +96,7 @@ void print_temp(){
         voltage[i] = battery[i].batteryvoltage;
     }
     int local_ifcharge = ifcharge;
-    int local_air_temp = air_temp;
+    int local_air_temp = bms_temperature.AirTemp;
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
@@ -123,7 +123,7 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.311 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.313 \n"
         "                           \n";
 
     printf("%s", logo);
@@ -138,7 +138,7 @@ void get_soc() {
         voltage_sum += battery[i].batteryvoltage;
     }
     voltage_average = voltage_sum / BATTERY_CELLS;
-    if ( voltage_average >= 4.2 ) ifvoltageerror = 1;
+    if (voltage_average >= 4.2 ) ifvoltageerror = 1;
     pthread_mutex_unlock(&lock);
 
     long ocv = 0;
@@ -185,8 +185,8 @@ void change_value(int mode, int ifup) {
     if (ifup) {
         switch(mode) {
             case 0:
-                if (air_temp < 127) air_temp ++; break;
-            case 1: 
+                if (bms_temperature.AirTemp < 127) bms_temperature.AirTemp ++; break;
+            case 1:
                 if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
                 if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage += 10; break;
@@ -201,8 +201,8 @@ void change_value(int mode, int ifup) {
     else if (!ifup) {
         switch(mode) {
             case 0:
-                if (air_temp > -127) air_temp --; break;
-            case 1: 
+                if (bms_temperature.AirTemp > -127) bms_temperature.AirTemp --; break;
+            case 1:
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
                 if (battery[0].batteryvoltage > 11) battery[0].batteryvoltage -= 10; break;
@@ -217,7 +217,7 @@ void change_value(int mode, int ifup) {
 }
 
 // User input thread    ||fix CAN data belongs to user input
-void *input_thread(void *arg) {
+void *input_thread(void *arg) {                                     //tid1
     char key_input = 0;
     int invalid_input = 0;
     while(ifrunning) {
@@ -275,7 +275,7 @@ void *input_thread(void *arg) {
 }
 
 // CAN tx thread
-void *can_sender_thread(void *arg) {
+void *can_sender_thread(void *arg) {                                        //tid2
     const char *interface_name = (const char *)arg;
     int sock;
     struct sockaddr_can addr;
@@ -330,7 +330,7 @@ void *can_sender_thread(void *arg) {
     close(sock);
     return NULL;
 }
-void *print_screen_thread(void *arg) {
+void *print_screen_thread(void *arg) {              //tid3
     printf(CLEAR_SCREEN);
     printf(CURSOR_HIDE);
     while(ifrunning) {
@@ -349,7 +349,7 @@ void *print_screen_thread(void *arg) {
 
 }
 
-void *charge_batterypack_thread(void *arg) {
+void *charge_batterypack_thread(void *arg) {            //tid4
     srand(time(NULL));
     while (ifrunning) {
         pthread_mutex_lock(&lock);
@@ -375,10 +375,19 @@ void *charge_batterypack_thread(void *arg) {
     }
 }
 
-void *idle_batterypack_thread(void *arg) {
-    pthread_mutex_lock(&lock);
-    int local_air_temp = air_temp;
-    pthread_mutex_unlock(&lock);
+void *temp_batterypack_thread(void *arg) {              //tid5
+    while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)
+        sleep(1);
+        pthread_mutex_lock(&lock);
+        int local_air_temp = bms_temperature.AirTemp;
+        for (int i = 0; i < BATTERY_CELLS; i++) {
+            int temp_gap = local_air_temp - battery[i].batterytemp;
+            if (temp_gap < 5 && temp_gap > 2) battery[i].batterytemp++;
+            else if (temp_gap < -2 && temp_gap > -5) battery[i].batterytemp--;
+            battery[i].batterytemp += (temp_gap / 5);
+        }
+        pthread_mutex_unlock(&lock);
+    }
 
 
 }
@@ -412,7 +421,7 @@ int main(int argc, char *argv[]) {
     // Apply new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    pthread_t tid1, tid2, tid3, tid4;
+    pthread_t tid1, tid2, tid3, tid4, tid5;
     
 
     pthread_mutex_init(&lock, NULL);
@@ -422,12 +431,14 @@ int main(int argc, char *argv[]) {
     pthread_create(&tid2, NULL, can_sender_thread, argv[1]);
     pthread_create(&tid3, NULL, print_screen_thread, NULL);
     pthread_create(&tid4, NULL, charge_batterypack_thread, NULL);
+    pthread_create(&tid5, NULL, temp_batterypack_thread, NULL);
 
     // Main Thread wait for both threads
     pthread_join(tid1, NULL);
     pthread_join(tid2, NULL);
     pthread_join(tid3, NULL);
     pthread_join(tid4, NULL);
+    pthread_join(tid5, NULL);
 
     pthread_mutex_destroy(&lock);
 

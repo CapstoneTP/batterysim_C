@@ -52,7 +52,7 @@ BMS_SOC_t bms_soc = {
 // Reset (ID: 1575, 0x627)
 BMS_Temperature_t bms_temperature = {
     .Temperature = 0x00,
-    .AirTemp = 0x00,
+    .AirTemp = 0x19,
     .MinTemp = 0x00,
     .MinTempID = 0x00,
     .MaxTemp = 0x00,
