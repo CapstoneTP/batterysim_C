@@ -240,10 +240,6 @@ void *input_thread(void *arg) {                                     //tid1
                 break;
             case '\033': { // ESC || arrow key and...
                 // Check if this is an arrow key sequence
-                pthread_mutex_unlock(&lock);
-                printf(HIGHLIGHT"\n Press any key to QUIT\n"RESET);
-                pthread_mutex_lock(&lock);
-                
                 char next_char = getchar();
                 
                 if (next_char == '[') {
