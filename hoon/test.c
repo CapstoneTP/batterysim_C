@@ -42,7 +42,15 @@ int ifrunning = 1;
 int ifcharge = 0;
 int input_mode = 0;
 int ifvoltageerror = 0; //check if battery voltage value is in range
-int external_temp = 0;
+int air_temp = 0;
+
+/*================================================================
+functions for print screen
+=================================================================*/
+
+float scale_voltage(uint16_t raw) {
+    return raw * 0.1f;
+}
 
 void init_battery_array() {
     for (int i = 0; i < BATTERY_CELLS; i++) {
@@ -66,27 +74,39 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
 }
 
 void print_inputmode(int mode) {
-    switch(mode) {
-        case 0: printf(HIGHLIGHT "[C1temp]" RESET " [C1voltage] [C2temp] [C2voltage]\n\n"); break;
-        case 1: printf("[C1temp] " HIGHLIGHT "[C1voltage]" RESET " [C2temp] [C2voltage]\n\n"); break;
-        case 2: printf("[C1temp] [C1voltage] " HIGHLIGHT "[C2temp]" RESET " [C2voltage]\n\n"); break;
-        case 3: printf("[C1temp] [C1voltage] [C2temp] " HIGHLIGHT "[C2voltage]\n\n" RESET); break;
+    const char* items[] = {"air_temp", "C1temp", "C1voltage", "C2temp", "C2voltage", "air_temp"};
+    const int num_items = sizeof(items) / sizeof(items[0]);
+
+    for (int i = 0; i < num_items; i++) {
+        if (i == mode) {
+            printf(HIGHLIGHT "[%s]" RESET " ", items[i]);
+        } else {
+            printf("[%s] ", items[i]);
+        }
     }
+    printf("\n\n");
 }
 
 void print_temp(){
+    int temp[BATTERY_CELLS];
+    float voltage[BATTERY_CELLS];
     pthread_mutex_lock(&lock);
-    int temp1 = battery[0].batterytemp;
-    int temp2 = battery[1].batterytemp;
-    long voltage1 = battery[0].batteryvoltage;
-    long voltage2 = battery[1].batteryvoltage;
-    int print_ifcharge = ifcharge;
-    
+    for (int i = 0; i < BATTERY_CELLS; i++) {
+        temp[i] = battery[i].batterytemp;
+        voltage[i] = battery[i].batteryvoltage;
+    }
+    int local_ifcharge = ifcharge;
+    int local_air_temp = air_temp;
     pthread_mutex_unlock(&lock);
 
-    printf("[C1:%d°C, %ldv] [C2:%d°C, %ldv]", temp1, voltage1, temp2, voltage2);
-    if (print_ifcharge) printf(GREEN"  charging                    " RESET);
-    if (!print_ifcharge) printf(RED "  not charging now" RESET);
+    for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
+        printf("[C%d:%d°C, %.2fv] ", i + 1, temp[i], scale_voltage(voltage[i]));
+        if ( i % 5 == 0 && i != 0) printf("\n");
+    }
+    printf("[air_temp: %d]", local_air_temp);
+
+    if (local_ifcharge) printf(GREEN "  charging                    " RESET);
+    else printf(RED "  not charging now" RESET);
 }
 
 void print_logo() {
@@ -103,7 +123,7 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.31 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.311 \n"
         "                           \n";
 
     printf("%s", logo);
@@ -164,28 +184,32 @@ void refresh_CAN_container() {
 void change_value(int mode, int ifup) {
     if (ifup) {
         switch(mode) {
-            case 0: 
-                if (battery[0].batterytemp < 100) battery[0].batterytemp++; break;
-            case 1:
-                if (battery[0].batteryvoltage < 500) battery[0].batteryvoltage++; break;
+            case 0:
+                if (air_temp < 127) air_temp ++; break;
+            case 1: 
+                if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
-                if (battery[1].batterytemp < 100) battery[1].batterytemp++; break;
+                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage++; break;
             case 3:
-                if (battery[0].batteryvoltage < 500) battery[1].batteryvoltage++; break;
+                if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
+            case 4:
+                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage++; break;
             default:
                 break;
         }
     }
     else if (!ifup) {
         switch(mode) {
-            case 0: 
-                if (battery[0].batterytemp > 0) battery[0].batterytemp--; break;
-            case 1:
-                if (battery[0].batteryvoltage > 0) battery[0].batteryvoltage--; break;
+            case 0:
+                if (air_temp > -127) air_temp --; break;
+            case 1: 
+                if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[1].batterytemp > 0) battery[1].batterytemp--; break;
+                if (battery[0].batteryvoltage > -127) battery[0].batteryvoltage--; break;
             case 3:
-                if (battery[1].batteryvoltage > 0) battery[1].batteryvoltage--; break;
+                if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
+            case 4:
+                if (battery[1].batteryvoltage > -127) battery[1].batteryvoltage--; break;
             default:
                 break;
         }
@@ -220,13 +244,13 @@ void *input_thread(void *arg) {
                 char next_char = getchar();
                 if (next_char == '[') {
                     char arrow = getchar();
-                    switch (arrow) {
+                    switch (arrow) {        //use change_value()
                         case UP:   // Up arrow
                             change_value(input_mode, 1); break;
                         case DOWN:   // Down arrow
                             change_value(input_mode, 0); break;
                         case RIGHT: // Right arrow
-                            if (input_mode < 3) input_mode++;
+                            if (input_mode < 4) input_mode++;
                             break;
                         case LEFT: // Left arrow
                             if (input_mode > 0) input_mode--;
@@ -267,8 +291,13 @@ void *can_sender_thread(void *arg) {
     strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
     ifr.ifr_name[IFNAMSIZ - 1] = '\0';
     if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
-        perror("인터페이스 인덱스 가져오기 실패");
+        printf(HIGHLIGHT);
+        perror("\npress any key to continue\n인터페이스 인덱스 가져오기 실패");
+        printf(RESET);
         close(sock);
+        pthread_mutex_lock(&lock);
+        ifrunning = 0;
+        pthread_mutex_unlock(&lock);
         return NULL;
     }
 
@@ -334,8 +363,8 @@ void *charge_batterypack_thread(void *arg) {
             random = rand() % RANDOM_PERCENT;
             pthread_mutex_lock(&lock);
             //increase voltage
-            battery[0].batteryvoltage++;
-            battery[1].batteryvoltage++;
+            battery[0].batteryvoltage += 0.5;
+            battery[1].batteryvoltage += 0.5;
             //randomly increase temp
             if (random == 1) battery[0].batterytemp++;
             if (random == 2) battery[1].batterytemp++;
@@ -347,18 +376,23 @@ void *charge_batterypack_thread(void *arg) {
 }
 
 void *idle_batterypack_thread(void *arg) {
+    pthread_mutex_lock(&lock);
+    int local_air_temp = air_temp;
+    pthread_mutex_unlock(&lock);
+
 
 }
 
 int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);  // turn off buffering for stdout
-    printf(CLEAR_SCREEN);              //clear whole screen
-    printf(SET_CURSOR_UL);
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <can_interface>\n", argv[0]);
         return 1;
     }
+
+    printf(CLEAR_SCREEN);              //clear whole screen
+    printf(SET_CURSOR_UL);
 
     init_battery_array();
     printf("waiting for battery reset .");
