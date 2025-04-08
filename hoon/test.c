@@ -41,6 +41,8 @@ typedef struct {
 int ifrunning = 1;
 int ifcharge = 0;
 int input_mode = 0;
+int ifvoltageerror = 0; //check if battery voltage value is in range
+int external_temp = 0;
 
 void init_battery_array() {
     for (int i = 0; i < BATTERY_CELLS; i++) {
@@ -83,8 +85,8 @@ void print_temp(){
     pthread_mutex_unlock(&lock);
 
     printf("[C1:%d°C, %ldv] [C2:%d°C, %ldv]", temp1, voltage1, temp2, voltage2);
-    if (ifcharge) printf(GREEN"  charging                    " RESET);
-    if (!ifcharge) printf(RED "  not charging now" RESET);
+    if (print_ifcharge) printf(GREEN"  charging                    " RESET);
+    if (!print_ifcharge) printf(RED "  not charging now" RESET);
 }
 
 void print_logo() {
@@ -107,6 +109,28 @@ void print_logo() {
     printf("%s", logo);
 }
 
+void get_soc() {
+    long voltage_sum = 0;
+    long voltage_average = 0;
+
+    pthread_mutex_lock(&lock);
+    for (int i = 0; i < BATTERY_CELLS; i++){
+        voltage_sum += battery[i].batteryvoltage;
+    }
+    voltage_average = voltage_sum / BATTERY_CELLS;
+    if ( voltage_average >= 4.2 ) ifvoltageerror = 1;
+    pthread_mutex_unlock(&lock);
+
+    long ocv = 0;
+    if (bms_temperature.Temperature >= 45) ocv = -0.02;
+    else if (bms_temperature.Temperature >= 0 && bms_temperature.Temperature < 45) ocv = 0;
+    else if (bms_temperature.Temperature >= -10 && bms_temperature.Temperature < 25) ocv = 0.02;
+    else if (bms_temperature.Temperature < -10 && bms_temperature.Temperature) ocv = 0.04;
+
+
+}
+
+
 
 
 
@@ -122,7 +146,7 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
     {0x629, {0}, 8}         //bms_dc_charging
 };
 
-// User defiend function
+// User defined function
 void refresh_CAN_container() {
     // Copy bms_structure into can sender
     // mutex already locked before calling refresh_CAN_container
@@ -174,7 +198,6 @@ void *input_thread(void *arg) {
     int invalid_input = 0;
     while(ifrunning) {
         key_input = getchar();
-        // scanf("%c", &key_input); <<- delete
         pthread_mutex_lock(&lock);
         switch(key_input) {
             case ' ':       //whiespace key pressed
@@ -229,6 +252,7 @@ void *input_thread(void *arg) {
 
 // CAN tx thread
 void *can_sender_thread(void *arg) {
+    const char *interface_name = (const char *)arg;
     int sock;
     struct sockaddr_can addr;
     struct ifreq ifr;
@@ -240,7 +264,8 @@ void *can_sender_thread(void *arg) {
         return NULL;
     }
 
-    strcpy(ifr.ifr_name, INTERFACENAME);
+    strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+    ifr.ifr_name[IFNAMSIZ - 1] = '\0';
     if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
         perror("인터페이스 인덱스 가져오기 실패");
         close(sock);
@@ -315,14 +340,26 @@ void *charge_batterypack_thread(void *arg) {
             if (random == 1) battery[0].batterytemp++;
             if (random == 2) battery[1].batterytemp++;
             pthread_mutex_unlock(&lock);
+        } else {
+            usleep(SLEEPTIME);
         }
     }
 }
 
-int main() {
+void *idle_batterypack_thread(void *arg) {
+
+}
+
+int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);  // turn off buffering for stdout
     printf(CLEAR_SCREEN);              //clear whole screen
     printf(SET_CURSOR_UL);
+
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <can_interface>\n", argv[0]);
+        return 1;
+    }
+
     init_battery_array();
     printf("waiting for battery reset .");
     usleep(1000000);
@@ -348,7 +385,7 @@ int main() {
     
     // start InputThread && CANtxThread
     pthread_create(&tid1, NULL, input_thread, NULL);
-    pthread_create(&tid2, NULL, can_sender_thread, NULL);
+    pthread_create(&tid2, NULL, can_sender_thread, argv[1]);
     pthread_create(&tid3, NULL, print_screen_thread, NULL);
     pthread_create(&tid4, NULL, charge_batterypack_thread, NULL);
 

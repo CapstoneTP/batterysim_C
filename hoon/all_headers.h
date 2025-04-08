@@ -22,6 +22,10 @@ all_headers.h
 #include <termios.h>
 #include <time.h>
 #include <sys/time.h>
+#include <math.h>
+
+//MACROS
+#define INTERFACENAMESIZE 50
 
 //MACORS for color printing
 #define BLACK  "\033[30m" 
@@ -45,6 +49,8 @@ all_headers.h
 
 //MACROS for setting default values for dbc
 #define BATTERY_CELLS 3
+#define MIN_VALUE 3.0
+#define MAX_VALUE 4.2
 
 //userdefined headers
 #include "dbc.h"
