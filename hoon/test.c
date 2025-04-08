@@ -189,11 +189,11 @@ void change_value(int mode, int ifup) {
             case 1: 
                 if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
-                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage++; break;
+                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage += 10; break;
             case 3:
                 if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
             case 4:
-                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage++; break;
+                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage += 10; break;
             default:
                 break;
         }
@@ -205,11 +205,11 @@ void change_value(int mode, int ifup) {
             case 1: 
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[0].batteryvoltage > -127) battery[0].batteryvoltage--; break;
+                if (battery[0].batteryvoltage > 11) battery[0].batteryvoltage -= 10; break;
             case 3:
                 if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
             case 4:
-                if (battery[1].batteryvoltage > -127) battery[1].batteryvoltage--; break;
+                if (battery[1].batteryvoltage > 11) battery[1].batteryvoltage -= 10; break;
             default:
                 break;
         }
@@ -363,8 +363,8 @@ void *charge_batterypack_thread(void *arg) {
             random = rand() % RANDOM_PERCENT;
             pthread_mutex_lock(&lock);
             //increase voltage
-            battery[0].batteryvoltage += 0.5;
-            battery[1].batteryvoltage += 0.5;
+            battery[0].batteryvoltage += 5;
+            battery[1].batteryvoltage += 5;
             //randomly increase temp
             if (random == 1) battery[0].batterytemp++;
             if (random == 2) battery[1].batterytemp++;
