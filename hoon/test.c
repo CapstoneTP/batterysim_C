@@ -99,8 +99,8 @@ void print_temp(){
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
-        printf("[C%d:%d°C, %.2fv] ", i + 1, temp[i], scale_voltage(voltage[i]));
-        if ( i % 5 == 0 && i != 0) printf("\n");
+        printf("[C%.3d:%.3d°C, %.2fv] ", i + 1, temp[i], scale_voltage(voltage[i]));
+        if ( (i + 1) % 10 == 0) printf("\n");
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
 
@@ -240,7 +240,12 @@ void *input_thread(void *arg) {                                     //tid1
                 break;
             case '\033': { // ESC || arrow key and...
                 // Check if this is an arrow key sequence
+                pthread_mutex_unlock(&lock);
+                printf(HIGHLIGHT"\n Press any key to QUIT\n"RESET);
+                pthread_mutex_lock(&lock);
+                
                 char next_char = getchar();
+                
                 if (next_char == '[') {
                     char arrow = getchar();
                     switch (arrow) {        //use change_value()
@@ -440,7 +445,6 @@ int main(int argc, char *argv[]) {
     pthread_join(tid5, NULL);
 
     pthread_mutex_destroy(&lock);
-
     printf(CURSOR_SHOW);
     printf("\n");
 
