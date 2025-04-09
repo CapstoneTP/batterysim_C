@@ -380,7 +380,7 @@ void *temp_batterypack_thread(void *arg) {              //tid5
         double maxtemp = -1e9;
         int maxtempid = 0;
         double totaltemps = 0;
-        sleep(1);
+        usleep(500000);
         pthread_mutex_lock(&lock);
         double local_air_temp = bms_temperature.AirTemp;
         for (int i = 0; i < BATTERY_CELLS; i++) {
@@ -404,7 +404,7 @@ void *temp_batterypack_thread(void *arg) {              //tid5
                 iftempfan = 2;      //heater fan
             }
             else iftempfan = 0;
-            battery[i].batterytemp += (temp_gap / 10);
+            battery[i].batterytemp += (temp_gap / 20);
         }
         bms_temperature.Temperature = (totaltemps / BATTERY_CELLS);     //get average temps
         bms_temperature.MaxTemp = maxtemp;
@@ -442,7 +442,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
         bms_soc.SOC = percent;
-        bms_soc.DOD = 100 - percent;
+        bms_soc.DOD = bms_soc.Capacity * ((double)(100 - percent) / 100);
         bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages);
         bms_battery_info.MinVoltage = (uint8_t)(minvoltage * 10);
         bms_battery_info.MinVoltageID = minvoltageid;
@@ -470,6 +470,8 @@ int main(int argc, char *argv[]) {
     usleep(300000);
     printf("\rwaiting for start ...");
     usleep(700000);
+    
+    bms_soc.Capacity = batterypack.DesignedCapacity * ((double)bms_soc.SOH / 100);
 
     // Get input without buffer ('\n')
     struct termios newt, oldt;

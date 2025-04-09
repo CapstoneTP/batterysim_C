@@ -104,6 +104,11 @@ typedef struct __attribute__((packed)) {
     uint16_t Resistance;
 } Battery_t;
 
+typedef struct __attribute__((packed)) {
+    uint16_t DesignedCapacity;
+    uint16_t Resistance;
+} Batterypack_t;
+
 /*================================================================
 extern declarations
 =================================================================*/
@@ -119,5 +124,6 @@ extern BMS_DC_Charging_t bms_dc_charging;
 
 extern Battery_t default_battery;
 extern Battery_t battery[BATTERY_CELLS];
+extern Batterypack_t batterypack;
 
 #endif // DBC_H
