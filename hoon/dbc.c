@@ -77,5 +77,5 @@ BMS_DC_Charging_t bms_dc_charging = {
     .DCLinePower = 0x0000
 };
 
-Battery_t default_battery = {0x19, 0x0000, 0x00, 0x64, 0x0000, 0x0000};
+Battery_t default_battery = {0x19, 3.0, 0x00, 0x64, 0x0000, 0x0000};
 Battery_t battery[BATTERY_CELLS];

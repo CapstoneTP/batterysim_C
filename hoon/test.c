@@ -47,8 +47,12 @@ int iftempfan = 0;      //if fan works
 functions for print screen
 =================================================================*/
 
-float scale_voltage(uint16_t raw) {
-    return raw * 0.1f;
+double scale_voltage(uint16_t raw) {
+    return raw * 0.1;
+}
+
+uint16_t descale_voltage(double voltage) {
+    return (uint16_t)(voltage * 10.0f);
 }
 
 void init_battery_array() {
@@ -68,7 +72,7 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
     for (; i < BAR_WIDTH; i++) {
         printf(" ");
     }
-    printf("] %d%%\n", soc);
+    printf("] %d%%                    \n", soc);
     fflush(stdout);
 }
 
@@ -86,9 +90,9 @@ void print_inputmode(int mode) {
     printf("\n\n");
 }
 
-void print_temp(){
+void print_cell(){
     int temp[BATTERY_CELLS];
-    float voltage[BATTERY_CELLS];
+    double voltage[BATTERY_CELLS];
     pthread_mutex_lock(&lock);
     for (int i = 0; i < BATTERY_CELLS; i++) {
         temp[i] = battery[i].batterytemp;
@@ -100,7 +104,7 @@ void print_temp(){
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
-        printf("[C%.3d:%.3d°C, %.2fv] ", i + 1, temp[i], scale_voltage(voltage[i]));
+        printf("[C%.3d:%.3d°C, %.2fv] ", i + 1, temp[i], voltage[i]);
         if ( (i + 1) % 10 == 0) printf("\n");
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
@@ -126,19 +130,19 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.32 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.321 \n"
         "                           \n";
 
     printf("%s", logo);
 }
 
-float get_ocv() {           // no mutex lock
-    float ocv = 0;
-    if (bms_temperature.Temperature >= 45) ocv = -0.02;
-    else if (bms_temperature.Temperature >= 0 && bms_temperature.Temperature < 45) ocv = 0;
-    else if (bms_temperature.Temperature >= -10 && bms_temperature.Temperature < 25) ocv = 0.02;
-    else if (bms_temperature.Temperature < -10) ocv = 0.04;
-    return ocv;
+double get_correct(double battery_temp) {           // no mutex lock
+    double correct = 0;
+    if (battery_temp >= 45) correct = -0.02;
+    else if (battery_temp >= 0 && battery_temp < 45) correct = 0;
+    else if (battery_temp >= -10 && battery_temp < 25) correct = 0.02;
+    else if (battery_temp < -10) correct = 0.04;
+    return correct;
 }
 
 
@@ -180,11 +184,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
-                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage += 10; break;
+                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage += 0.1; break;
             case 3:
                 if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
             case 4:
-                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage += 10; break;
+                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage += 0.1; break;
             default:
                 break;
         }
@@ -196,11 +200,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[0].batteryvoltage > 11) battery[0].batteryvoltage -= 10; break;
+                if (battery[0].batteryvoltage > 11) battery[0].batteryvoltage -= 0.1; break;
             case 3:
                 if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
             case 4:
-                if (battery[1].batteryvoltage > 11) battery[1].batteryvoltage -= 10; break;
+                if (battery[1].batteryvoltage > 11) battery[1].batteryvoltage -= 0.1; break;
             default:
                 break;
         }
@@ -333,7 +337,7 @@ void *print_screen_thread(void *arg) {              //tid3
         print_logo();
         print_inputmode(local_input_mode);
         print_battery_bar(soc);
-        print_temp();
+        print_cell();
 
         usleep(100000);
     }
@@ -349,16 +353,19 @@ void *charge_batterypack_thread(void *arg) {            //tid4
         if (local_ifcharge) {
             usleep (300000);
             //choose random chance
-            struct timespec now;
             int random = 0;
             random = rand() % RANDOM_PERCENT;
             pthread_mutex_lock(&lock);
             //increase voltage
-            battery[0].batteryvoltage++;
-            battery[1].batteryvoltage++;
-            //randomly increase temp
-            if (random == 1) battery[0].batterytemp++;
-            if (random == 2) battery[1].batterytemp++;
+            for (int i = 0 ; i < BATTERY_CELLS; i++) {
+                battery[i].batteryvoltage += 0.01;
+            }
+            //randomly increase temp for a few random cells
+            for (int j = 0; j < BATTERY_CELLS; j++) {
+                if ((rand() % RANDOM_PERCENT) == 0) {
+                    battery[j].batterytemp += 0.5;
+                }
+            }
             pthread_mutex_unlock(&lock);
         } else {
             usleep(SLEEPTIME);
@@ -369,10 +376,10 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 void *temp_batterypack_thread(void *arg) {              //tid5
     while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)ㅋ
         double mintemp = 1e9;
-        double mintempid = 0;
+        int mintempid = 0;
         double maxtemp = -1e9;
-        double maxtempid = 0;
-        long wholetemps = 0;
+        int maxtempid = 0;
+        double totaltemps = 0;
         sleep(1);
         pthread_mutex_lock(&lock);
         double local_air_temp = bms_temperature.AirTemp;
@@ -385,7 +392,7 @@ void *temp_batterypack_thread(void *arg) {              //tid5
                 maxtemp = battery[i].batterytemp;
                 maxtempid = i + 1;
             }
-            wholetemps += battery[i].batterytemp;
+            totaltemps += battery[i].batterytemp;
 
             double temp_gap = local_air_temp - battery[i].batterytemp;
             if (bms_temperature.Temperature > 46) {
@@ -399,7 +406,7 @@ void *temp_batterypack_thread(void *arg) {              //tid5
             else iftempfan = 0;
             battery[i].batterytemp += (temp_gap / 10);
         }
-        bms_temperature.Temperature = (wholetemps / BATTERY_CELLS);     //get average temps
+        bms_temperature.Temperature = (totaltemps / BATTERY_CELLS);     //get average temps
         bms_temperature.MaxTemp = maxtemp;
         bms_temperature.MaxTempID = maxtempid;
         bms_temperature.MinTemp = mintemp;
@@ -408,13 +415,40 @@ void *temp_batterypack_thread(void *arg) {              //tid5
     }
 }
 
-void *voltage_batterypack_thread(void *arg) {
+void *voltage_batterypack_thread(void *arg) {                   //tid6
     while (ifrunning) {
+        double total_corrected_voltages = 0;
+        double minvoltage = 1e9;
+        double minvoltageid = 0;
+        double maxvoltage = -1e0;
+        double maxvoltageid = 0;
+        usleep(100000);
+        pthread_mutex_lock(&lock);
         for (int i = 0; i < BATTERY_CELLS; i++){
-
+            // Get the calibration adjustment based on the battery cell's temperature
+            double corrected_voltage = battery[i].batteryvoltage + get_correct(battery[i].batterytemp);
+            if (minvoltage > corrected_voltage) {
+                minvoltage = corrected_voltage;
+                minvoltageid = i + 1;
+            }
+            if (maxvoltage < corrected_voltage) {
+                maxvoltage = corrected_voltage;
+                maxvoltageid = i + 1;
+            }
+            total_corrected_voltages += corrected_voltage;
         }
-
-
+        //percent = ((value - min) / (max - min)) * 100.0
+        int percent = (int)(((total_corrected_voltages / BATTERY_CELLS) - VOLTAGE_MIN) / (VOLTAGE_MAX - VOLTAGE_MIN) * 100.0);
+        if (percent > 100) percent = 100;
+        if (percent < 0) percent = 0;
+        bms_soc.SOC = percent;
+        bms_soc.DOD = 100 - percent;
+        bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages);
+        bms_battery_info.MinVoltage = (uint8_t)(minvoltage * 10);
+        bms_battery_info.MinVoltageID = minvoltageid;
+        bms_battery_info.MaxVoltage = (uint8_t)(maxvoltage * 10);
+        bms_battery_info.MaxVoltageID = maxvoltageid;
+        pthread_mutex_unlock(&lock);
     }
 }
 
@@ -447,7 +481,7 @@ int main(int argc, char *argv[]) {
     // Apply new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    pthread_t tid1, tid2, tid3, tid4, tid5;
+    pthread_t tid1, tid2, tid3, tid4, tid5, tid6;
     
 
     pthread_mutex_init(&lock, NULL);
@@ -458,6 +492,7 @@ int main(int argc, char *argv[]) {
     pthread_create(&tid3, NULL, print_screen_thread, NULL);
     pthread_create(&tid4, NULL, charge_batterypack_thread, NULL);
     pthread_create(&tid5, NULL, temp_batterypack_thread, NULL);
+    pthread_create(&tid6, NULL, voltage_batterypack_thread, NULL);
 
     // Main Thread wait for both threads
     pthread_join(tid1, NULL);
@@ -465,6 +500,7 @@ int main(int argc, char *argv[]) {
     pthread_join(tid3, NULL);
     pthread_join(tid4, NULL);
     pthread_join(tid5, NULL);
+    pthread_join(tid6, NULL);
 
     pthread_mutex_destroy(&lock);
     printf(CURSOR_SHOW);

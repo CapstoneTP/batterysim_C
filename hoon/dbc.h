@@ -97,13 +97,12 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     double_t batterytemp;
-    uint16_t batteryvoltage;
+    double_t batteryvoltage;
     uint8_t batterycurrent;
     uint8_t batterySOH;
     uint16_t DesignedCapacity;
     uint16_t Resistance;
 } Battery_t;
-
 
 /*================================================================
 extern declarations

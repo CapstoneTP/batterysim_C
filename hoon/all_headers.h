@@ -49,8 +49,8 @@ all_headers.h
 
 //MACROS for setting default values for dbc
 #define BATTERY_CELLS 3
-#define MIN_VALUE 3.0
-#define MAX_VALUE 4.2
+#define VOLTAGE_MIN 3.0
+#define VOLTAGE_MAX 4.2
 
 //userdefined headers
 #include "dbc.h"
