@@ -122,7 +122,7 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.313 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.32 \n"
         "                           \n";
 
     printf("%s", logo);
@@ -376,14 +376,35 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 
 void *temp_batterypack_thread(void *arg) {              //tid5
     while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)
+        int mintemp = 0;
+        int mintempid = 0;
+        int maxtemp = 0;
+        int maxtempid = 0;
+        double wholetmeps = 0;
         sleep(2);
         pthread_mutex_lock(&lock);
         int local_air_temp = bms_temperature.AirTemp;
         for (int i = 0; i < BATTERY_CELLS; i++) {
+            if (mintemp > battery[i].batterytemp) {
+                mintemp = battery[i].batterytemp;
+                mintempid = i + 1;
+            }
+            if (maxtemp < battery[i].batterytemp) {
+                maxtemp = battery[i].batterytemp;
+                maxtempid = i + 1;
+            }
+            wholetmeps += battery[i].batterytemp;
+
             int temp_gap = local_air_temp - battery[i].batterytemp;
             if (temp_gap < 5 && temp_gap > 2) battery[i].batterytemp++;
             else if (temp_gap < -2 && temp_gap > -5) battery[i].batterytemp--;
-            battery[i].batterytemp += (temp_gap / 3);
+            battery[i].batterytemp += (temp_gap / 5);
+
+            bms_temperature.Temperature = (wholetmeps / BATTERY_CELLS);     //get average temps
+            bms_temperature.MaxTemp = maxtemp;
+            bms_temperature.MaxTempID = maxtempid;
+            bms_temperature.MinTemp = mintemp;
+            bms_temperature.MinTempID = mintempid;
         }
         pthread_mutex_unlock(&lock);
     }
@@ -392,22 +413,22 @@ void *temp_batterypack_thread(void *arg) {              //tid5
 }
 
 int main(int argc, char *argv[]) {
-    setvbuf(stdout, NULL, _IONBF, 0);  // turn off buffering for stdout
+    setvbuf(stdout, NULL, _IONBF, 0);  // turn off buffering for stdout, print screen instantly (without enter)
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <can_interface>\n", argv[0]);
         return 1;
     }
 
-    printf(CLEAR_SCREEN);              //clear whole screen
-    printf(SET_CURSOR_UL);
+    printf(CLEAR_SCREEN);              // clear whole screen
+    printf(SET_CURSOR_UL);             // set cursor UpLeft
 
     init_battery_array();
-    printf("waiting for battery reset .");
+    printf("waiting for start .");
     usleep(1000000);
-    printf("\rwaiting for battery reset ..");
+    printf("\rwaiting for start ..");
     usleep(300000);
-    printf("\rwaiting for battery reset ...");
+    printf("\rwaiting for start ...");
     usleep(700000);
 
     // Get input without buffer ('\n')
