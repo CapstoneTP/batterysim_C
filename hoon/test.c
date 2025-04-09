@@ -127,7 +127,7 @@ void print_logo() {
     printf("%s", logo);
 }
 
-float get_soc() {           // no mutex lock
+float get_ocv() {           // no mutex lock
     float ocv = 0;
     if (bms_temperature.Temperature >= 45) ocv = -0.02;
     else if (bms_temperature.Temperature >= 0 && bms_temperature.Temperature < 45) ocv = 0;
@@ -349,8 +349,8 @@ void *charge_batterypack_thread(void *arg) {            //tid4
             random = rand() % RANDOM_PERCENT;
             pthread_mutex_lock(&lock);
             //increase voltage
-            battery[0].batteryvoltage += 5;
-            battery[1].batteryvoltage += 5;
+            battery[0].batteryvoltage++;
+            battery[1].batteryvoltage++;
             //randomly increase temp
             if (random == 1) battery[0].batterytemp++;
             if (random == 2) battery[1].batterytemp++;
@@ -363,14 +363,14 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 
 void *temp_batterypack_thread(void *arg) {              //tid5
     while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)ㅋ
-        int mintemp = 0;
-        int mintempid = 0;
-        int maxtemp = 0;
-        int maxtempid = 0;
-        long wholetmeps = 0;
-        sleep(2);
+        double mintemp = 0;
+        double mintempid = 0;
+        double maxtemp = 0;
+        double maxtempid = 0;
+        long wholetemps = 0;
+        sleep(1);
         pthread_mutex_lock(&lock);
-        int local_air_temp = bms_temperature.AirTemp;
+        double local_air_temp = bms_temperature.AirTemp;
         for (int i = 0; i < BATTERY_CELLS; i++) {
             if (mintemp > battery[i].batterytemp) {
                 mintemp = battery[i].batterytemp;
@@ -380,14 +380,14 @@ void *temp_batterypack_thread(void *arg) {              //tid5
                 maxtemp = battery[i].batterytemp;
                 maxtempid = i + 1;
             }
-            wholetmeps += battery[i].batterytemp;
+            wholetemps += battery[i].batterytemp;
 
-            int temp_gap = local_air_temp - battery[i].batterytemp;
-            if (temp_gap < 5 && temp_gap > 2) battery[i].batterytemp++;
-            else if (temp_gap < -2 && temp_gap > -5) battery[i].batterytemp--;
-            battery[i].batterytemp += (temp_gap / 5);
+            double temp_gap = local_air_temp - battery[i].batterytemp;
+            if (bms_temperature.Temperature > 46) battery[i].batterytemp -= 0.5;            //cooler fan
+            else if (bms_temperature.Temperature < -11) battery[i].batterytemp += 0.5;      //heater fan
+            battery[i].batterytemp += (temp_gap / 10);
 
-            bms_temperature.Temperature = (wholetmeps / BATTERY_CELLS);     //get average temps
+            bms_temperature.Temperature = (wholetemps / BATTERY_CELLS);     //get average temps
             bms_temperature.MaxTemp = maxtemp;
             bms_temperature.MaxTempID = maxtempid;
             bms_temperature.MinTemp = mintemp;
@@ -395,8 +395,16 @@ void *temp_batterypack_thread(void *arg) {              //tid5
         }
         pthread_mutex_unlock(&lock);
     }
+}
+
+void *voltage_batterypack_thread(void *arg) {
+    while (ifrunning) {
+        for (int i; i < BATTERY_CELLS; i++){
+
+        }
 
 
+    }
 }
 
 int main(int argc, char *argv[]) {
