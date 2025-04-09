@@ -16,7 +16,7 @@ ToDoLiSt
 //input_thread
 #define MAX_STRUCTS 9
 //CAN_sender_thread
-#define SLEEPTIME 100000  //500ms
+#define SLEEPTIME 100000  //100ms
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
 #define LOAD_TIME 100       // load time (unit: ms)
@@ -39,8 +39,9 @@ typedef struct {
 
 int ifrunning = 1;
 int ifcharge = 0;
-int input_mode = 0;
+int input_mode = 0;     //which value will be change
 int ifvoltageerror = 0; //check if battery voltage value is in range
+int iftempfan = 0;      //if fan works
 
 /*================================================================
 functions for print screen
@@ -95,6 +96,7 @@ void print_temp(){
     }
     int local_ifcharge = ifcharge;
     int local_air_temp = bms_temperature.AirTemp;
+    int local_iftempfan = iftempfan;
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
@@ -103,8 +105,11 @@ void print_temp(){
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
 
-    if (local_ifcharge) printf(GREEN "  charging                    " RESET);
-    else printf(RED "  not charging now" RESET);
+    if (local_ifcharge) printf(GREEN "  [charging] " RESET);
+    else printf(RED "  [not charging now]" RESET);
+    if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]               " RESET);
+    else if (local_iftempfan == 2) printf(RED "  [Heater fan active]                " RESET);
+    else printf("  [fan not activate]               " RESET);
 }
 
 void print_logo() {
@@ -132,7 +137,7 @@ float get_ocv() {           // no mutex lock
     if (bms_temperature.Temperature >= 45) ocv = -0.02;
     else if (bms_temperature.Temperature >= 0 && bms_temperature.Temperature < 45) ocv = 0;
     else if (bms_temperature.Temperature >= -10 && bms_temperature.Temperature < 25) ocv = 0.02;
-    else if (bms_temperature.Temperature < -10 && bms_temperature.Temperature) ocv = 0.04;
+    else if (bms_temperature.Temperature < -10) ocv = 0.04;
     return ocv;
 }
 
@@ -363,9 +368,9 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 
 void *temp_batterypack_thread(void *arg) {              //tid5
     while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)ㅋ
-        double mintemp = 0;
+        double mintemp = 1e9;
         double mintempid = 0;
-        double maxtemp = 0;
+        double maxtemp = -1e9;
         double maxtempid = 0;
         long wholetemps = 0;
         sleep(1);
@@ -383,23 +388,29 @@ void *temp_batterypack_thread(void *arg) {              //tid5
             wholetemps += battery[i].batterytemp;
 
             double temp_gap = local_air_temp - battery[i].batterytemp;
-            if (bms_temperature.Temperature > 46) battery[i].batterytemp -= 0.5;            //cooler fan
-            else if (bms_temperature.Temperature < -11) battery[i].batterytemp += 0.5;      //heater fan
+            if (bms_temperature.Temperature > 46) {
+                battery[i].batterytemp -= 0.5;
+                iftempfan = 1;            //cooler fan
+            }
+            else if (bms_temperature.Temperature < -11) {
+                battery[i].batterytemp += 0.5;
+                iftempfan = 2;      //heater fan
+            }
+            else iftempfan = 0;
             battery[i].batterytemp += (temp_gap / 10);
-
-            bms_temperature.Temperature = (wholetemps / BATTERY_CELLS);     //get average temps
-            bms_temperature.MaxTemp = maxtemp;
-            bms_temperature.MaxTempID = maxtempid;
-            bms_temperature.MinTemp = mintemp;
-            bms_temperature.MinTempID = mintempid;
         }
+        bms_temperature.Temperature = (wholetemps / BATTERY_CELLS);     //get average temps
+        bms_temperature.MaxTemp = maxtemp;
+        bms_temperature.MaxTempID = maxtempid;
+        bms_temperature.MinTemp = mintemp;
+        bms_temperature.MinTempID = mintempid;
         pthread_mutex_unlock(&lock);
     }
 }
 
 void *voltage_batterypack_thread(void *arg) {
     while (ifrunning) {
-        for (int i; i < BATTERY_CELLS; i++){
+        for (int i = 0; i < BATTERY_CELLS; i++){
 
         }
 
