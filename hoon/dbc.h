@@ -96,7 +96,7 @@ typedef struct __attribute__((packed)) {
 } BMS_DC_Charging_t;
 
 typedef struct __attribute__((packed)) {
-    uint8_t batterytemp;
+    int8_t batterytemp;
     uint16_t batteryvoltage;
     uint8_t batterycurrent;
     uint8_t batterySOH;

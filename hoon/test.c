@@ -241,7 +241,6 @@ void *input_thread(void *arg) {                                     //tid1
             case '\033': { // ESC || arrow key and...
                 // Check if this is an arrow key sequence
                 char next_char = getchar();
-                
                 if (next_char == '[') {
                     char arrow = getchar();
                     switch (arrow) {        //use change_value()
@@ -377,14 +376,14 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 
 void *temp_batterypack_thread(void *arg) {              //tid5
     while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)
-        sleep(1);
+        sleep(2);
         pthread_mutex_lock(&lock);
         int local_air_temp = bms_temperature.AirTemp;
         for (int i = 0; i < BATTERY_CELLS; i++) {
             int temp_gap = local_air_temp - battery[i].batterytemp;
             if (temp_gap < 5 && temp_gap > 2) battery[i].batterytemp++;
             else if (temp_gap < -2 && temp_gap > -5) battery[i].batterytemp--;
-            battery[i].batterytemp += (temp_gap / 5);
+            battery[i].batterytemp += (temp_gap / 3);
         }
         pthread_mutex_unlock(&lock);
     }
