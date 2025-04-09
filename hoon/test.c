@@ -443,7 +443,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
         if (percent < 0) percent = 0;
         bms_soc.SOC = percent;
         bms_soc.DOD = 100 - percent;
-        bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages);
+        bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages / BATTERY_CELLS);
         bms_battery_info.MinVoltage = (uint8_t)(minvoltage * 10);
         bms_battery_info.MinVoltageID = minvoltageid;
         bms_battery_info.MaxVoltage = (uint8_t)(maxvoltage * 10);
