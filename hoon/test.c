@@ -184,11 +184,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
-                if (battery[0].batteryvoltage < 127) battery[0].batteryvoltage += 0.1; break;
+                if (battery[0].batteryvoltage < 4.5) battery[0].batteryvoltage += 0.1; break;
             case 3:
                 if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
             case 4:
-                if (battery[0].batteryvoltage < 127) battery[1].batteryvoltage += 0.1; break;
+                if (battery[1].batteryvoltage < 4.5) battery[1].batteryvoltage += 0.1; break;
             default:
                 break;
         }
@@ -200,11 +200,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[0].batteryvoltage > 11) battery[0].batteryvoltage -= 0.1; break;
+                if (battery[0].batteryvoltage > 2.5) battery[0].batteryvoltage -= 0.1; break;
             case 3:
                 if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
             case 4:
-                if (battery[1].batteryvoltage > 11) battery[1].batteryvoltage -= 0.1; break;
+                if (battery[1].batteryvoltage > 2.5) battery[1].batteryvoltage -= 0.1; break;
             default:
                 break;
         }
