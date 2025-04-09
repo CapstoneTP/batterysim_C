@@ -16,7 +16,6 @@ ToDoLiSt
 //input_thread
 #define MAX_STRUCTS 9
 //CAN_sender_thread
-#define INTERFACENAME "vcan0"
 #define SLEEPTIME 100000  //500ms
 //print_screen_thread
 #define BAR_WIDTH 50        // MAX-length of loading bar
@@ -128,25 +127,13 @@ void print_logo() {
     printf("%s", logo);
 }
 
-void get_soc() {
-    long voltage_sum = 0;
-    long voltage_average = 0;
-
-    pthread_mutex_lock(&lock);
-    for (int i = 0; i < BATTERY_CELLS; i++){
-        voltage_sum += battery[i].batteryvoltage;
-    }
-    voltage_average = voltage_sum / BATTERY_CELLS;
-    if (voltage_average >= 4.2 ) ifvoltageerror = 1;
-    pthread_mutex_unlock(&lock);
-
-    long ocv = 0;
+float get_soc() {           // no mutex lock
+    float ocv = 0;
     if (bms_temperature.Temperature >= 45) ocv = -0.02;
     else if (bms_temperature.Temperature >= 0 && bms_temperature.Temperature < 45) ocv = 0;
     else if (bms_temperature.Temperature >= -10 && bms_temperature.Temperature < 25) ocv = 0.02;
     else if (bms_temperature.Temperature < -10 && bms_temperature.Temperature) ocv = 0.04;
-
-
+    return ocv;
 }
 
 
@@ -375,12 +362,12 @@ void *charge_batterypack_thread(void *arg) {            //tid4
 }
 
 void *temp_batterypack_thread(void *arg) {              //tid5
-    while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)
+    while(ifrunning) {                                  //every logics work on runtime, always. (if there's any input or not)ㅋ
         int mintemp = 0;
         int mintempid = 0;
         int maxtemp = 0;
         int maxtempid = 0;
-        double wholetmeps = 0;
+        long wholetmeps = 0;
         sleep(2);
         pthread_mutex_lock(&lock);
         int local_air_temp = bms_temperature.AirTemp;
