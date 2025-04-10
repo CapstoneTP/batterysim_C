@@ -13,7 +13,7 @@ ToDoLiSt
 - [X] erase '<<- delete'
 =================================================================*/
 
-#define VERSION "0.331"
+#define VERSION "0.332"
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -69,7 +69,7 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
     
     printf("Battery: [");
     for (i = 0; i < bar_length; i++) {
-        printf("=");
+        printf("█");
     }
     for (; i < BAR_WIDTH; i++) {
         printf(" ");
@@ -107,7 +107,7 @@ void print_cell(){
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
         printf("[C%.3d:%.3d°C, %.2fv] ", i + 1, temp[i], voltage[i]);
-        if ( (i + 1) % 10 == 0) printf("\n");
+        if ( (i + 1) % 12 == 0) printf("\n");
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
 
@@ -163,8 +163,8 @@ void print_logo(int option) {
 double get_correct(double battery_temp) {           // no mutex lock
     double correct = 0;
     if (battery_temp >= 45) correct = -0.02;
-    else if (battery_temp >= 0 && battery_temp < 45) correct = 0;
-    else if (battery_temp >= -10 && battery_temp < 25) correct = 0.02;
+    else if (battery_temp >= 12 && battery_temp < 45) correct = 0;
+    else if (battery_temp >= -10 && battery_temp < 12) correct = 0.02;
     else if (battery_temp < -10) correct = 0.04;
     return correct;
 }
@@ -206,11 +206,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp < 127) battery[0].batterytemp++; break;
             case 2:
-                if (battery[0].batteryvoltage < 4.5) battery[0].batteryvoltage += 0.1; break;
+                if (battery[0].batteryvoltage < 9.0) battery[0].batteryvoltage += 0.1; break;
             case 3:
                 if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
             case 4:
-                if (battery[1].batteryvoltage < 4.5) battery[1].batteryvoltage += 0.1; break;
+                if (battery[1].batteryvoltage < 5.5) battery[1].batteryvoltage += 0.1; break;
             default:
                 break;
         }
@@ -222,11 +222,11 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[0].batteryvoltage > 2.5) battery[0].batteryvoltage -= 0.1; break;
+                if (battery[0].batteryvoltage > 9.0) battery[0].batteryvoltage -= 0.1; break;
             case 3:
                 if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
             case 4:
-                if (battery[1].batteryvoltage > 2.5) battery[1].batteryvoltage -= 0.1; break;
+                if (battery[1].batteryvoltage > 5.5) battery[1].batteryvoltage -= 0.1; break;
             default:
                 break;
         }
@@ -257,7 +257,7 @@ void initializer(){
     if (air_temp > 127) air_temp = 127;
 
     pthread_mutex_lock(&lock);
-    bms_soc.SOC = soc;
+    default_battery.batteryvoltage = VOLTAGE_MIN + ((VOLTAGE_MAX - VOLTAGE_MIN) * soc / 100);
     bms_soc.SOH = soh;
     batterypack.DesignedCapacity = designed_capacity;
     bms_temperature.AirTemp = air_temp;
@@ -498,7 +498,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
         if (percent < 0) percent = 0;
         bms_soc.SOC = percent;
         bms_soc.DOD = bms_soc.Capacity * ((double)(100 - percent) / 100);
-        bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages);
+        bms_battery_info.Voltage = (uint16_t)(total_corrected_voltages / 2);
         bms_battery_info.MinVoltage = (uint8_t)(minvoltage * 10);
         bms_battery_info.MinVoltageID = minvoltageid;
         bms_battery_info.MaxVoltage = (uint8_t)(maxvoltage * 10);

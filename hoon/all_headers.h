@@ -48,9 +48,9 @@ all_headers.h
 #define CURSOR_UP "\033[1A"
 
 //MACROS for setting default values for dbc
-#define BATTERY_CELLS 3
-#define VOLTAGE_MIN 3.0
-#define VOLTAGE_MAX 4.2
+#define BATTERY_CELLS 192
+#define VOLTAGE_MIN 6.0
+#define VOLTAGE_MAX 8.4
 
 //userdefined headers
 #include "dbc.h"
