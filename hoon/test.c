@@ -13,7 +13,7 @@ ToDoLiSt
 - [X] erase '<<- delete'
 =================================================================*/
 
-#define VERSION "0.334"
+#define VERSION "0.335"
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -74,7 +74,11 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
     for (; i < BAR_WIDTH; i++) {
         printf(" ");
     }
-    printf("] %d%%                    \n", soc);
+    printf("] %d%%  ", soc);
+    if (ifvoltageerror) {
+        printf(HIGHLIGHT"voltage or soc error"RESET"               \n");
+    }
+    else printf("                                 \n");
     fflush(stdout);
 }
 
@@ -230,7 +234,7 @@ void change_value(int mode, int ifup) {
             case 3:
                 if (battery[1].batterytemp < 127) battery[1].batterytemp++; break;
             case 4:
-                if (battery[1].batteryvoltage < 5.5) battery[1].batteryvoltage += 0.1; break;
+                if (battery[1].batteryvoltage < 9.0) battery[1].batteryvoltage += 0.1; break;
             default:
                 break;
         }
@@ -242,7 +246,7 @@ void change_value(int mode, int ifup) {
             case 1:
                 if (battery[0].batterytemp > -127) battery[0].batterytemp--; break;
             case 2:
-                if (battery[0].batteryvoltage > 9.0) battery[0].batteryvoltage -= 0.1; break;
+                if (battery[0].batteryvoltage > 5.5) battery[0].batteryvoltage -= 0.1; break;
             case 3:
                 if (battery[1].batterytemp > -127) battery[1].batterytemp--; break;
             case 4:
@@ -499,6 +503,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
         double maxvoltageid = 0;
         usleep(100000);
         pthread_mutex_lock(&lock);
+        ifvoltageerror = 0;
         for (int i = 0; i < BATTERY_CELLS; i++){
             // Get the calibration adjustment based on the battery cell's temperature
             double corrected_voltage = battery[i].batteryvoltage + get_correct(battery[i].batterytemp);
@@ -511,6 +516,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
                 maxvoltageid = i + 1;
             }
             total_corrected_voltages += corrected_voltage;
+            if (corrected_voltage > VOLTAGE_MAX || corrected_voltage < VOLTAGE_MIN) ifvoltageerror = 1;
         }
         //percent = ((value - min) / (max - min)) * 100.0
         int percent = (int)ceil(((total_corrected_voltages / BATTERY_CELLS) - VOLTAGE_MIN) / (VOLTAGE_MAX - VOLTAGE_MIN) * 100.0);
