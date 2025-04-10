@@ -13,6 +13,8 @@ ToDoLiSt
 - [X] erase '<<- delete'
 =================================================================*/
 
+#define VERSION "0.331"
+
 //input_thread
 #define MAX_STRUCTS 9
 //CAN_sender_thread
@@ -116,8 +118,28 @@ void print_cell(){
     else printf("  [fan not activate]               " RESET);
 }
 
-void print_logo() {
-    const char *logo =
+void print_logo(int option) {
+    if (option == 0){
+        const char *logo =
+            "██████╗ ███╗   ███╗███████╗\n"
+            "██╔══██╗████╗ ████║██╔════╝      \n"
+            "██████╔╝██╔████╔██║███████╗      \n"
+            "██╔══██╗██║╚██╔╝██║╚════██║      \n"
+            "██████╔╝██║ ╚═╝ ██║███████║      \n"
+            "╚═════╝ ╚═╝     ╚═╝╚══════╝\n"
+            "                           \n"
+            "███████╗  ██╗  ███╗   ███╗     \n"
+            "██╔════╝  ██║  ████╗ ████║     \n"
+            "███████╗  ██║  ██╔████╔██║     \n"
+            "╚════██║  ██║  ██║╚██╔╝██║     \n"
+            "███████║  ██║  ██║ ╚═╝ ██║     \n"
+            "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver "VERSION" \n"
+            "                           \n";
+
+        printf("%s", logo);
+    }
+    if (option == 1) {
+        const char *logo =
         "██████╗ ███╗   ███╗███████╗\n"
         "██╔══██╗████╗ ████║██╔════╝        Use ' ← → ' arrow keys to select value you want to change\n"
         "██████╔╝██╔████╔██║███████╗        Use ' ↑ ↓ ' arrow keys to change value [increase or decrease]\n"
@@ -130,10 +152,11 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.33 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver "VERSION" \n"
         "                           \n";
 
     printf("%s", logo);
+    }
 }
 
 
@@ -366,7 +389,7 @@ void *print_screen_thread(void *arg) {              //tid3
         int soc = bms_soc.SOC;
         int local_input_mode = input_mode;
         pthread_mutex_unlock(&lock);
-        print_logo();
+        print_logo(1);
         print_inputmode(local_input_mode);
         print_battery_bar(soc);
         print_cell();
@@ -494,7 +517,8 @@ int main(int argc, char *argv[]) {
 
     printf(CLEAR_SCREEN);              // clear whole screen
     printf(SET_CURSOR_UL);             // set cursor UpLeft
-
+    print_logo(0);
+    printf("\n\n");
     initializer();
 
     init_battery_array();
