@@ -130,11 +130,12 @@ void print_logo() {
         "███████╗  ██║  ██╔████╔██║     \n"
         "╚════██║  ██║  ██║╚██╔╝██║     \n"
         "███████║  ██║  ██║ ╚═╝ ██║     \n"
-        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.321 \n"
+        "╚══════╝  ╚═╝  ╚═╝     ╚═╝_ver 0.33 \n"
         "                           \n";
 
     printf("%s", logo);
 }
+
 
 double get_correct(double battery_temp) {           // no mutex lock
     double correct = 0;
@@ -144,8 +145,6 @@ double get_correct(double battery_temp) {           // no mutex lock
     else if (battery_temp < -10) correct = 0.04;
     return correct;
 }
-
-
 
 
 
@@ -209,6 +208,39 @@ void change_value(int mode, int ifup) {
                 break;
         }
     }
+}
+
+
+
+void initializer(){
+    int soc, soh, designed_capacity, air_temp;
+    printf("input SOC you want (0~100): ");
+    scanf("%d", &soc);
+    if (soc < 0) soc = 0;
+    if (soc > 100) soc = 100;
+
+    printf("input SOH you want (0~100): ");
+    scanf("%d", &soh);
+    if (soh < 0) soh = 0;
+    if (soh > 100) soh = 100;
+
+    printf("input designed capacity you want (mAh): ");
+    scanf("%d", &designed_capacity);
+    if (designed_capacity < 0) designed_capacity = 0;
+
+    printf("input air temp you want (℃): ");
+    scanf("%d", &air_temp);
+    if (air_temp < -40) air_temp = -40;
+    if (air_temp > 127) air_temp = 127;
+
+    pthread_mutex_lock(&lock);
+    bms_soc.SOC = soc;
+    bms_soc.SOH = soh;
+    batterypack.DesignedCapacity = designed_capacity;
+    bms_temperature.AirTemp = air_temp;
+    pthread_mutex_unlock(&lock);
+
+    bms_soc.Capacity = batterypack.DesignedCapacity * ((double)bms_soc.SOH / 100);
 }
 
 // User input thread    ||fix CAN data belongs to user input
@@ -438,7 +470,7 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
             total_corrected_voltages += corrected_voltage;
         }
         //percent = ((value - min) / (max - min)) * 100.0
-        int percent = (int)(((total_corrected_voltages / BATTERY_CELLS) - VOLTAGE_MIN) / (VOLTAGE_MAX - VOLTAGE_MIN) * 100.0);
+        int percent = (int)ceil(((total_corrected_voltages / BATTERY_CELLS) - VOLTAGE_MIN) / (VOLTAGE_MAX - VOLTAGE_MIN) * 100.0);
         if (percent > 100) percent = 100;
         if (percent < 0) percent = 0;
         bms_soc.SOC = percent;
@@ -462,6 +494,8 @@ int main(int argc, char *argv[]) {
 
     printf(CLEAR_SCREEN);              // clear whole screen
     printf(SET_CURSOR_UL);             // set cursor UpLeft
+
+    initializer();
 
     init_battery_array();
     printf("waiting for start .");

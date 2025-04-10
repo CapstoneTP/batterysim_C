@@ -3,7 +3,7 @@
 # =====================================================================
 
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I -lpthread.
+CFLAGS = -Wall -Wextra -g -I -lpthread -lm
 
 TARGET = bms_simulator
 
