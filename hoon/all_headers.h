@@ -33,11 +33,12 @@ all_headers.h
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 #define RED     "\033[31m"
+#define CYAN    "\033[36m"
 #define RESET   "\033[0m"
 
-#define YELLOW_BG   "\033[43m"
-#define BLUE_BG "\033[44m"
 #define HIGHLIGHT "\033[33m\033[41m"
+#define MAXHIGHLIGHT "\033[31m\033[43m"
+#define MINHIGHLIGHT "\033[34m\033[43m"
 
 
 //MACORS for setting cursor position

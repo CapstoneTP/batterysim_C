@@ -13,7 +13,7 @@ ToDoLiSt
 - [X] erase '<<- delete'
 =================================================================*/
 
-#define VERSION "0.332"
+#define VERSION "0.334"
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -106,7 +106,27 @@ void print_cell(){
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
-        printf("[C%.3d:%.3d°C, %.2fv] ", i + 1, temp[i], voltage[i]);
+        // temperature color
+        const char* temp_color = RESET;
+        if (temp[i] <= -10) temp_color = BLUE;
+        else if (temp[i] <= 0) temp_color = YELLOW;
+        else if (temp[i] >= 45) temp_color = RED;
+        else if (temp[i] >= 13) temp_color = GREEN;
+
+        // voltage color
+        const char* volt_color = RESET;
+        if (voltage[i] <= 6.0) volt_color = RED;
+        else if (voltage[i] <= 6.5) volt_color = YELLOW;
+        else if (voltage[i] >= 8.4) volt_color = RED;
+        else if (voltage[i] >= 8.0) volt_color = GREEN;
+
+        if ((i + 1) == bms_battery_info.MaxVoltageID) volt_color = MAXHIGHLIGHT;
+        if ((i + 1) == bms_battery_info.MinVoltageID) volt_color = MINHIGHLIGHT;
+        if ((i + 1) == bms_temperature.MaxTempID) temp_color = MAXHIGHLIGHT;
+        if ((i + 1) == bms_temperature.MinTempID) temp_color = MINHIGHLIGHT;
+
+        printf("[C%.3d:%s%.3d°C%s, %s%.2fv%s] ", i + 1, temp_color, temp[i], RESET, volt_color, voltage[i], RESET);
+
         if ( (i + 1) % 12 == 0) printf("\n");
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
