@@ -129,7 +129,7 @@ void print_cell(){
         if ((i + 1) == bms_temperature.MaxTempID) temp_color = MAXHIGHLIGHT;
         if ((i + 1) == bms_temperature.MinTempID) temp_color = MINHIGHLIGHT;
 
-        printf("[C%.3d:%s%.3d°C%s, %s%.2fv%s] ", i + 1, temp_color, temp[i], RESET, volt_color, voltage[i], RESET);
+        printf("[C%.3d:%s%4.3d°C%s, %s%.2fv%s] ", i + 1, temp_color, temp[i], RESET, volt_color, voltage[i], RESET);
 
         if ( (i + 1) % 12 == 0) printf("\n");
     }
