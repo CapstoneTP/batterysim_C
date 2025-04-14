@@ -13,7 +13,7 @@ ToDoLiSt
 - [X] erase '<<- delete'
 =================================================================*/
 
-#define VERSION "0.335"
+#define VERSION "0.34"
 
 //input_thread
 #define MAX_STRUCTS 9
