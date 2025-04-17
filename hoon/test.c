@@ -131,7 +131,7 @@ void print_cell(){
 
         printf("[C%.3d:%s%4.3d°C%s, %s%.2fv%s] ", i + 1, temp_color, temp[i], RESET, volt_color, voltage[i], RESET);
 
-        if ( (i + 1) % 12 == 0) printf("\n");
+        if ( (i + 1) % CELLS_IN_LINE == 0) printf("\n");
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
 

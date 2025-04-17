@@ -27,6 +27,7 @@ all_headers.h
 //MACROS
 #define INTERFACENAMESIZE 50
 
+
 //MACORS for color printing
 #define BLACK  "\033[30m" 
 #define BLUE    "\033[34m"
@@ -52,6 +53,7 @@ all_headers.h
 #define BATTERY_CELLS 192
 #define VOLTAGE_MIN 6.0
 #define VOLTAGE_MAX 8.4
+#define CELLS_IN_LINE 10
 
 //userdefined headers
 #include "dbc.h"
