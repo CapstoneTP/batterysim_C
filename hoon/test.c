@@ -11,9 +11,11 @@ ToDoLiSt
 - [X] if this option selected, means this code works well
     - [ ] if this option selected, means this code need fix, check '<<- need fix'
 - [X] erase '<<- delete'
+- [x] change ifcharge into BMS_Status_t;<<Status
+    -[x]debugging
 =================================================================*/
 
-#define VERSION "0.34"
+#define VERSION "0.4"
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -40,7 +42,6 @@ typedef struct {
 } CAN_Message;
 
 int ifrunning = 1;
-int ifcharge = 0;
 int input_mode = 0;     //which value will be change
 int ifvoltageerror = 0; //check if battery voltage value is in range
 int iftempfan = 0;      //if fan works
@@ -104,7 +105,7 @@ void print_cell(){
         temp[i] = battery[i].batterytemp;
         voltage[i] = battery[i].batteryvoltage;
     }
-    int local_ifcharge = ifcharge;
+    int local_status = bms_status.Status;
     int local_air_temp = bms_temperature.AirTemp;
     int local_iftempfan = iftempfan;
     pthread_mutex_unlock(&lock);
@@ -135,7 +136,7 @@ void print_cell(){
     }
     printf("\n\n[air_temp: %d]", local_air_temp);
 
-    if (local_ifcharge) printf(GREEN "  [charging] " RESET);
+    if (local_status) printf(GREEN "  [charging] " RESET);
     else printf(RED "  [not charging now]" RESET);
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]               " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]                " RESET);
@@ -299,7 +300,7 @@ void *input_thread(void *arg) {                                     //tid1
         pthread_mutex_lock(&lock);
         switch(key_input) {
             case ' ':       //whiespace key pressed
-                ifcharge =!ifcharge;
+                bms_status.Status =!bms_status.Status;
                 break;
             case 'a':
                 if (battery[0].batterytemp > 0) battery[0].batterytemp--;
@@ -351,24 +352,24 @@ void *input_thread(void *arg) {                                     //tid1
 // CAN tx thread
 void *can_sender_thread(void *arg) {                                        //tid2
     const char *interface_name = (const char *)arg;
-    int sock;
+    int tx_sock;
     struct sockaddr_can addr;
     struct ifreq ifr;
     struct can_frame frame;
     
     // Generate CAN socket
-    if ((sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+    if ((tx_sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
         perror("소켓 생성 실패");
         return NULL;
     }
 
     strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
     ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-    if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
+    if (ioctl(tx_sock, SIOCGIFINDEX, &ifr) < 0) {
         printf(HIGHLIGHT);
         perror("\npress any key to continue\n인터페이스 인덱스 가져오기 실패");
         printf(RESET);
-        close(sock);
+        close(tx_sock);
         pthread_mutex_lock(&lock);
         ifrunning = 0;
         pthread_mutex_unlock(&lock);
@@ -378,9 +379,9 @@ void *can_sender_thread(void *arg) {                                        //ti
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
 
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(tx_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("소켓 바인드 실패");
-        close(sock);
+        close(tx_sock);
         return NULL;
     }
 
@@ -394,16 +395,75 @@ void *can_sender_thread(void *arg) {                                        //ti
             memcpy(frame.data, can_msgs[i].data, frame.can_dlc);
             pthread_mutex_unlock(&lock);
 
-            if (write(sock, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
+            if (write(tx_sock, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame)) {
                 perror("CAN 패킷 전송 실패");
             }
             usleep(SLEEPTIME);
         }
     }
     
-    close(sock);
+    close(tx_sock);
     return NULL;
 }
+
+void *can_receiver_thread(void *arg) {              //tid10
+    const char *interface_name = (const char *)arg;
+    int rx_sock;
+    struct sockaddr_can addr;
+    struct ifreq ifr;
+    struct can_frame frame;
+    
+    // Generate CAN socket
+    if ((rx_sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+        perror("소켓 생성 실패");
+        return NULL;
+    }
+
+    strncpy(ifr.ifr_name, interface_name, IFNAMSIZ - 1);
+    ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+    if (ioctl(rx_sock, SIOCGIFINDEX, &ifr) < 0) {
+        printf(HIGHLIGHT);
+        perror("\npress any key to continue\n인터페이스 인덱스 가져오기 실패");
+        printf(RESET);
+        close(rx_sock);
+        pthread_mutex_lock(&lock);
+        ifrunning = 0;
+        pthread_mutex_unlock(&lock);
+        return NULL;
+    }
+
+    addr.can_family = AF_CAN;
+    addr.can_ifindex = ifr.ifr_ifindex;
+
+    if (bind(rx_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("소켓 바인드 실패");
+        close(rx_sock);
+        return NULL;
+    }
+
+    while (ifrunning) {
+        int nbytes = read(rx_sock, &frame, sizeof(struct can_frame));
+        if (nbytes > 0) {
+            if (frame.can_id == 0x010) {
+                if (frame.data[0] == 0x01) {
+                    pthread_mutex_lock(&lock);
+                    bms_status.Status = 1;
+                    pthread_mutex_unlock(&lock);
+                }
+                else if (frame.data[0] == 0x00) {
+                    pthread_mutex_lock(&lock);
+                    bms_status.Status = 0;
+                    pthread_mutex_unlock(&lock);
+                }
+            }
+        } else if (nbytes < 0) {
+            perror("CAN 수신 실패");
+            break;
+        }
+    }
+}
+
+
 void *print_screen_thread(void *arg) {              //tid3
     printf(CLEAR_SCREEN);
     printf(CURSOR_HIDE);
@@ -420,16 +480,15 @@ void *print_screen_thread(void *arg) {              //tid3
 
         usleep(100000);
     }
-
 }
 
 void *charge_batterypack_thread(void *arg) {            //tid4
     srand(time(NULL));
     while (ifrunning) {
         pthread_mutex_lock(&lock);
-        int local_ifcharge = ifcharge;
+        int local_status = bms_status.Status;
         pthread_mutex_unlock(&lock);
-        if (local_ifcharge) {
+        if (local_status) {
             usleep (300000);
             //choose random chance
             int random = 0;
@@ -567,7 +626,7 @@ int main(int argc, char *argv[]) {
     // Apply new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    pthread_t tid1, tid2, tid3, tid4, tid5, tid6;
+    pthread_t tid1, tid2, tid3, tid4, tid5, tid6, tid7;
     
 
     pthread_mutex_init(&lock, NULL);
@@ -575,10 +634,11 @@ int main(int argc, char *argv[]) {
     // start InputThread && CANtxThread
     pthread_create(&tid1, NULL, input_thread, NULL);
     pthread_create(&tid2, NULL, can_sender_thread, argv[1]);
-    pthread_create(&tid3, NULL, print_screen_thread, NULL);
-    pthread_create(&tid4, NULL, charge_batterypack_thread, NULL);
-    pthread_create(&tid5, NULL, temp_batterypack_thread, NULL);
-    pthread_create(&tid6, NULL, voltage_batterypack_thread, NULL);
+    pthread_create(&tid3, NULL, can_receiver_thread, argv[1]);
+    pthread_create(&tid4, NULL, print_screen_thread, NULL);
+    pthread_create(&tid5, NULL, charge_batterypack_thread, NULL);
+    pthread_create(&tid6, NULL, temp_batterypack_thread, NULL);
+    pthread_create(&tid7, NULL, voltage_batterypack_thread, NULL);
 
     // Main Thread wait for both threads
     pthread_join(tid1, NULL);
@@ -587,6 +647,7 @@ int main(int argc, char *argv[]) {
     pthread_join(tid4, NULL);
     pthread_join(tid5, NULL);
     pthread_join(tid6, NULL);
+    pthread_join(tid7, NULL);
 
     pthread_mutex_destroy(&lock);
     printf(CURSOR_SHOW);

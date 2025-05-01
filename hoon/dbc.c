@@ -18,7 +18,7 @@ VIN_car_info_t vin_car_info = {
 
 // Reset (ID: 1570, 0x622)
 BMS_Status_t bms_status = {
-    .Status = 0x00,
+    .Status = 0,
     .Time = 0x1234,
     .Flags = 0x00,
     .DTC1 = 0b00000001,
