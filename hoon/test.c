@@ -15,7 +15,7 @@ ToDoLiSt
     -[x]debugging
 =================================================================*/
 
-#define VERSION "0.4"
+#define VERSION "0.41"
 
 //input_thread
 #define MAX_STRUCTS 9
@@ -453,6 +453,13 @@ void *can_receiver_thread(void *arg) {              //tid10
                 else if (frame.data[0] == 0x00) {
                     pthread_mutex_lock(&lock);
                     bms_status.Status = 0;
+                    pthread_mutex_unlock(&lock);
+                }
+            }
+            if (frame.can_id == 0x11) {
+                if (frame.data[0] == 0x01) {
+                    pthread_mutex_lock(&lock);
+                    if (bms_status.Status == 0) init_battery_array();
                     pthread_mutex_unlock(&lock);
                 }
             }
