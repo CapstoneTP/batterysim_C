@@ -17,7 +17,7 @@ ToDoLiSt
 
 #define VERSION "0.41"
 
-//input_thread
+//CANSenderThread
 #define MAX_STRUCTS 9
 //CAN_sender_thread
 #define SLEEPTIME 100000  //100ms
@@ -50,21 +50,21 @@ int iftempfan = 0;      //if fan works
 functions for print screen
 =================================================================*/
 
-double scale_voltage(uint16_t raw) {
+double ScaleVoltage(uint16_t raw) {
     return raw * 0.1;
 }
 
-uint16_t descale_voltage(double voltage) {
+uint16_t DeScaleVoltage(double voltage) {
     return (uint16_t)(voltage * 10.0f);
 }
 
-void init_battery_array() {
+void InitBatteryArray() {
     for (int i = 0; i < BATTERY_CELLS; i++) {
         memcpy(&battery[i], &default_battery, sizeof(Battery_t));
     }
 }
 
-void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_t
+void PrintBatteryBar(int soc) {                // soc stands on 0x626, BMS_SOC_t
     int bar_length = (soc * BAR_WIDTH) / 100;
     int i;
     
@@ -83,7 +83,7 @@ void print_battery_bar(int soc){                // soc stands on 0x626, BMS_SOC_
     fflush(stdout);
 }
 
-void print_inputmode(int mode) {
+void PrintInputMode(int mode) {
     const char* items[] = {"air_temp", "C1temp", "C1voltage", "C2temp", "C2voltage"};
     const int num_items = sizeof(items) / sizeof(items[0]);
 
@@ -97,7 +97,7 @@ void print_inputmode(int mode) {
     printf("\n\n");
 }
 
-void print_cell(){
+void PrintCell() {
     int temp[BATTERY_CELLS];
     double voltage[BATTERY_CELLS];
     pthread_mutex_lock(&lock);
@@ -143,8 +143,8 @@ void print_cell(){
     else printf("  [fan not activate]               " RESET);
 }
 
-void print_logo(int option) {
-    if (option == 0){
+void PrintLogo(int option) {
+    if (option == 0) {
         const char *logo =
             "██████╗ ███╗   ███╗███████╗\n"
             "██╔══██╗████╗ ████║██╔════╝      \n"
@@ -185,7 +185,7 @@ void print_logo(int option) {
 }
 
 
-double get_correct(double battery_temp) {           // no mutex lock
+double GetCorrectVoltage(double battery_temp) {           // no mutex lock
     double correct = 0;
     if (battery_temp >= 45) correct = -0.02;
     else if (battery_temp >= 12 && battery_temp < 45) correct = 0;
@@ -209,9 +209,9 @@ CAN_Message can_msgs[MAX_STRUCTS] = {
 };
 
 // User defined function
-void refresh_CAN_container() {
+void RefreshCANContainer() {
     // Copy bms_structure into can sender
-    // mutex already locked before calling refresh_CAN_container
+    // mutex already locked before calling RefreshCANContainer
     memcpy(can_msgs[0].data, &bms_company_info, 8);
     memcpy(can_msgs[1].data, &vin_car_info, 8);
     memcpy(can_msgs[2].data, &bms_status, 6);
@@ -223,7 +223,7 @@ void refresh_CAN_container() {
     memcpy(can_msgs[8].data, &bms_dc_charging, 8);
 }
 
-void change_value(int mode, int ifup) {
+void ChangeValue(int mode, int ifup) {
     if (ifup) {
         switch(mode) {
             case 0:
@@ -260,7 +260,7 @@ void change_value(int mode, int ifup) {
 
 
 
-void initializer(){
+void SimInitializer() {
     int soc, soh, designed_capacity, air_temp;
     printf("input SOC you want (0~100): ");
     scanf("%d", &soc);
@@ -319,11 +319,11 @@ void *input_thread(void *arg) {                                     //tid1
                 char next_char = getchar();
                 if (next_char == '[') {
                     char arrow = getchar();
-                    switch (arrow) {        //use change_value()
+                    switch (arrow) {        //use ChangeValue()
                         case UP:   // Up arrow
-                            change_value(input_mode, 1); break;
+                            ChangeValue(input_mode, 1); break;
                         case DOWN:   // Down arrow
-                            change_value(input_mode, 0); break;
+                            ChangeValue(input_mode, 0); break;
                         case RIGHT: // Right arrow
                             if (input_mode < 4) input_mode++;
                             break;
@@ -389,7 +389,7 @@ void *can_sender_thread(void *arg) {                                        //ti
     while (ifrunning) {
         for (int i = 0; i < MAX_STRUCTS; i++) {
             pthread_mutex_lock(&lock);
-            refresh_CAN_container();
+            RefreshCANContainer();
             frame.can_id = can_msgs[i].id;
             frame.can_dlc = can_msgs[i].len;
             memcpy(frame.data, can_msgs[i].data, frame.can_dlc);
@@ -459,7 +459,7 @@ void *can_receiver_thread(void *arg) {              //tid10
             if (frame.can_id == 0x11) {
                 if (frame.data[0] == 0x01) {
                     pthread_mutex_lock(&lock);
-                    if (bms_status.Status == 0) init_battery_array();
+                    if (bms_status.Status == 0) InitBatteryArray();
                     pthread_mutex_unlock(&lock);
                 }
             }
@@ -480,10 +480,10 @@ void *print_screen_thread(void *arg) {              //tid3
         int soc = bms_soc.SOC;
         int local_input_mode = input_mode;
         pthread_mutex_unlock(&lock);
-        print_logo(1);
-        print_inputmode(local_input_mode);
-        print_battery_bar(soc);
-        print_cell();
+        PrintLogo(1);
+        PrintInputMode(local_input_mode);
+        PrintBatteryBar(soc);
+        PrintCell();
 
         usleep(100000);
     }
@@ -570,9 +570,9 @@ void *voltage_batterypack_thread(void *arg) {                   //tid6
         usleep(100000);
         pthread_mutex_lock(&lock);
         ifvoltageerror = 0;
-        for (int i = 0; i < BATTERY_CELLS; i++){
+        for (int i = 0; i < BATTERY_CELLS; i++) {
             // Get the calibration adjustment based on the battery cell's temperature
-            double corrected_voltage = battery[i].batteryvoltage + get_correct(battery[i].batterytemp);
+            double corrected_voltage = battery[i].batteryvoltage + GetCorrectVoltage(battery[i].batterytemp);
             if (minvoltage > corrected_voltage) {
                 minvoltage = corrected_voltage;
                 minvoltageid = i + 1;
@@ -609,11 +609,11 @@ int main(int argc, char *argv[]) {
 
     printf(CLEAR_SCREEN);              // clear whole screen
     printf(SET_CURSOR_UL);             // set cursor UpLeft
-    print_logo(0);
+    PrintLogo(0);
     printf("\n\n");
-    initializer();
+    SimInitializer();
 
-    init_battery_array();
+    InitBatteryArray();
     printf("waiting for start .");
     usleep(1000000);
     printf("\rwaiting for start ..");
@@ -638,7 +638,7 @@ int main(int argc, char *argv[]) {
 
     pthread_mutex_init(&lock, NULL);
     
-    // start InputThread && CANtxThread
+    // start CANSenderThread && CANtxThread
     pthread_create(&tid1, NULL, input_thread, NULL);
     pthread_create(&tid2, NULL, can_sender_thread, argv[1]);
     pthread_create(&tid3, NULL, can_receiver_thread, argv[1]);

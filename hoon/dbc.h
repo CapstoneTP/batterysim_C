@@ -96,18 +96,43 @@ typedef struct __attribute__((packed)) {
 } BMS_DC_Charging_t;
 
 typedef struct __attribute__((packed)) {
-    double_t batterytemp;
-    double_t batteryvoltage;
-    uint8_t batterycurrent;
-    uint8_t batterySOH;
-    uint16_t DesignedCapacity;
-    uint16_t Resistance;
-} Battery_t;
+    double_t temp;
+    double_t R0, R1, C1;
+    uint16_t capacity;
+    uint8_t charge_current;
+    double_t voltage_terminal;
+    double_t voltage_delay;
+    double_t SOC;
+} Battery_t;                                // battery as an object
 
+
+// Temperature, R0, R1, C1, capacity, chareg_current, voltage_delay, voltage_terminal
 typedef struct __attribute__((packed)) {
-    uint16_t DesignedCapacity;
-    uint16_t Resistance;
-} Batterypack_t;
+    double_t Temperature;
+    double_t R0, R1, C1;                       // resistance
+    double_t capacity;
+    double_t charge_current;
+    double_t voltage;
+} Cell_Data_t;                              // Cell data via sensor
+
+
+typedef struct {
+    double SOC;
+    double V1;
+    double Voltage_terminal;
+} Estimate_t;
+
+
+typedef struct {
+    int init;
+    double F[2][2];
+    double Q[2][2];
+    double P[2][2];
+    double Pp[2][2];
+    double R;
+} State_t;
+
+
 
 /*================================================================
 extern declarations
@@ -124,6 +149,8 @@ extern BMS_DC_Charging_t bms_dc_charging;
 
 extern Battery_t default_battery;
 extern Battery_t battery[BATTERY_CELLS];
-extern Batterypack_t batterypack;
+extern Cell_Data_t cell_data[BATTERY_CELLS];
 
+extern Estimate_t estimate[BATTERY_CELLS];
+extern State_t battery_state[BATTERY_CELLS];
 #endif // DBC_H

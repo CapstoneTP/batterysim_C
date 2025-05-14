@@ -51,12 +51,18 @@ all_headers.h
 
 //MACROS for setting default values for dbc
 #define BATTERY_CELLS 192
-#define VOLTAGE_MIN 6.0
-#define VOLTAGE_MAX 8.4
+#define VOLTAGE_MIN 2.5
+#define VOLTAGE_MAX 4.5
 #define CELLS_IN_LINE 10
+#define CELL_CAPACITY 4.07611f
+#define SOC_TAPER_START 80.0
+#define SOC_TAPER_END 98.0
+
+#define COULOMBIC_EFFICIENCY 1
+#define DELTA_TIME 1
 
 //userdefined headers
 #include "dbc.h"
-
+#include "./ocv_soc/ocv_soc_t.h"
 
 #endif // ALL_HEADERS_H

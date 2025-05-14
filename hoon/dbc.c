@@ -77,7 +77,30 @@ BMS_DC_Charging_t bms_dc_charging = {
     .DCLinePower = 0x0000
 };
 
-Battery_t default_battery = {0x19, 6.0, 0x00, 0x64, 0x0000, 0x0000};
+Battery_t default_battery = {
+    .temp = 0x19,
+    .R0 = 0.00005884314f,
+    .R1 = 0.011f,
+    .C1 = 4846.080679f,
+    .capacity = CELL_CAPACITY,
+    .charge_current = -0.41f,
+    .voltage_terminal = 0x0000,
+    .voltage_delay = 0x0000,
+    .SOC = 0x0000
+};
+
 Battery_t battery[BATTERY_CELLS];
 
-Batterypack_t batterypack = {121, 0x0000};
+// Cell_Data_t default_cell_data = {                                                                // Get cell data from battery (works like sensor data)
+//     .charge_current = 0x0000,
+//     .capacity = 0x0000,
+//     .R0 = 0x0000,
+//     .R1 = 0x0000,
+//     .C1 = 0x0000,
+//     .voltage_delay = 0x0000,
+//     .voltage_terminal = 0x0000,
+//     .Temperature = 0x0000
+// };
+Estimate_t estimate[BATTERY_CELLS] = {0};
+State_t battery_state[BATTERY_CELLS] = {0};
+Cell_Data_t cell_data[BATTERY_CELLS];

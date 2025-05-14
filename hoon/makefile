@@ -1,27 +1,26 @@
-# =====================================================================
-# makefile for BMS_simulator
-# =====================================================================
-
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I -lpthread -lm
+CFLAGS = -Wall -Wextra -g
+LDFLAGS = -lpthread -lm
+INCLUDES = -I.
+
+SRCS = main.c dbc.c ./ocv_soc/ocv_soc_t.c
+OBJS = $(SRCS:.c=.o)
 
 TARGET = bms_simulator
 
-SRCS = main.c dbc.c
-
-OBJS = $(SRCS:.c=.o)
-$(info OBJS=$(OBJS))
-
-HEADERS = all_headers.h dbc.h
-
-.PHONY: all clean
+.PHONY: all clean clean_objs
 
 all: $(TARGET)
+	@$(MAKE) clean_objs
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
-%.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+clean_objs:
+	rm -f $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(TARGET)
